@@ -101,12 +101,13 @@ static pt_match_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const uint32_t *c
 	PT_MALLOC(b, max);
 	for (st = 0, i = 1; i <= n_an; ++i) {
 		if (i == n_an || an[i].x != an[st].x) {
-			int32_t n = 0;
+			int32_t l, n = 0;
 			pt_match_t m;
 			if (i - st < min_cnt) goto end_chain;
 			for (j = st; j < i; ++j)
 				a[n++] = an[j].y;
 			radix_sort_gfa64(a, a + n);
+			for (l = 0; l < n; ++l) a[l] = (uint32_t)a[l];
 			m.m = pt_lis_64(n, a, b);
 			if (m.m < min_cnt) goto end_chain;
 			m.sid[0] = an[st].x >> 33;
