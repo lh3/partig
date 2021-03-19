@@ -12,7 +12,7 @@ static void print_usage(FILE *fp)
 int main(int argc, char *argv[])
 {
 	ketopt_t o = KETOPT_INIT;
-	int c;
+	int i, c;
 	gfa_t *g;
 	pt_pdopt_t po;
 
@@ -33,5 +33,13 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "[%s::%.3f] read the graph\n", __func__, pt_realtime());
 	pt_pdist(&po, g);
 	gfa_destroy(g);
+
+	if (pt_verbose >= 3) {
+		fprintf(stderr, "[M::%s] Version: %s\n", __func__, PT_VERSION);
+		fprintf(stderr, "[M::%s] CMD:", __func__);
+		for (i = 0; i < argc; ++i)
+			fprintf(stderr, " %s", argv[i]);
+		fprintf(stderr, "\n[M::%s] Real time: %.3f sec; CPU: %.3f sec; Peak RSS: %.3f GB\n", __func__, pt_realtime(), pt_cputime(), pt_peakrss() / 1024.0 / 1024.0 / 1024.0);
+	}
 	return 0;
 }

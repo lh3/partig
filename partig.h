@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include "gfa.h"
 
+#define PT_VERSION "0.0.0-dirty"
+
 typedef struct {
 	uint64_t x, y;
 } pt128_t;
