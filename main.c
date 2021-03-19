@@ -4,6 +4,16 @@
 #include "ketopt.h"
 #include "gfa.h"
 
+void pt_pdist_print(FILE *fp, const gfa_t *g, int32_t n_ma, const pt_match_t *ma)
+{
+	int32_t i;
+	for (i = 0; i < n_ma; ++i) {
+		const pt_match_t *m = &ma[i];
+		fprintf(fp, "%s\t%s\t%c\t%d\t%d\t%d\t%.6f\n", g->seg[m->sid[0]].name, g->seg[m->sid[1]].name,
+				"+-"[!!m->rev], m->n[0], m->n[1], m->m, m->sim);
+	}
+}
+
 static void print_usage(FILE *fp)
 {
 	fprintf(stderr, "Usage: partig [options] <in.gfa>\n");
@@ -13,6 +23,8 @@ int main(int argc, char *argv[])
 {
 	ketopt_t o = KETOPT_INIT;
 	int i, c;
+	int32_t n_ma;
+	pt_match_t *ma;
 	gfa_t *g;
 	pt_pdopt_t po;
 
@@ -31,7 +43,8 @@ int main(int argc, char *argv[])
 	g = gfa_read(argv[o.ind]);
 	if (pt_verbose >= 3)
 		fprintf(stderr, "[%s::%.3f] read the graph\n", __func__, pt_realtime());
-	pt_pdist(&po, g);
+	ma = pt_pdist(&po, g, &n_ma);
+	pt_pdist_print(stdout, g, n_ma, ma);
 	gfa_destroy(g);
 
 	if (pt_verbose >= 3) {

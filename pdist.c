@@ -1,5 +1,7 @@
+#include <math.h>
 #include "ptpriv.h"
 #include "ksort.h"
+#include "gfa-priv.h"
 
 #define mz_key(z) ((z).x)
 KRADIX_SORT_INIT(mz, pt_mz1_t, mz_key, 8)
@@ -9,6 +11,8 @@ void pt_opt_init(pt_pdopt_t *opt)
 	memset(opt, 0, sizeof(pt_pdopt_t));
 	opt->k = 51, opt->w = 51, opt->is_hpc = 1;
 	opt->max_occ = 20;
+	opt->min_cnt = 5;
+	opt->min_sim = 0.1;
 }
 
 static pt_mz1_t *pt_collect_minimizers(const pt_pdopt_t *opt, const gfa_t *g, uint32_t *n_mz_)
@@ -61,18 +65,85 @@ end_anchor:	st = j;
 	return a;
 }
 
-void pt_pdist(const pt_pdopt_t *opt, const gfa_t *g)
+int32_t pt_lis_64(int32_t n, const uint64_t *a, int32_t *b)
+{
+	int32_t i, k, L = 0, *M, *P = b;
+	PT_MALLOC(M, n+1);
+	for (i = 0; i < n; ++i) {
+		int32_t lo = 1, hi = L, newL;
+		while (lo <= hi) {
+			int32_t mid = (lo + hi + 1) >> 1;
+			if (a[M[mid]] < a[i]) lo = mid + 1;
+			else hi = mid - 1;
+		}
+		newL = lo, P[i] = M[newL - 1], M[newL] = i;
+		if (newL > L) L = newL;
+	}
+	k = M[L];
+	memcpy(M, P, n * sizeof(int32_t));
+	for (i = L - 1; i >= 0; --i) b[i] = k, k = M[k];
+	free(M);
+	return L;
+}
+
+static pt_match_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const uint32_t *cnt, int32_t k, int32_t min_cnt, double min_sim, int32_t *n_ma_)
+{
+	int64_t st, i, j, max = 0;
+	uint64_t *a;
+	int32_t *b, n_ma = 0, m_ma = 0;
+	pt_match_t *ma = 0;
+	for (st = 0, i = 1; i <= n_an; ++i) // pre-calculate the max size
+		if (i == n_an || an[i].x != an[st].x) {
+			max = max > i - st? max : i - st;
+			st = i;
+		}
+	PT_MALLOC(a, max);
+	PT_MALLOC(b, max);
+	for (st = 0, i = 1; i <= n_an; ++i) {
+		if (i == n_an || an[i].x != an[st].x) {
+			int32_t n = 0;
+			pt_match_t m;
+			if (i - st < min_cnt) goto end_chain;
+			for (j = st; j < i; ++j)
+				a[n++] = an[j].y;
+			radix_sort_gfa64(a, a + n);
+			m.m = pt_lis_64(n, a, b);
+			if (m.m < min_cnt) goto end_chain;
+			m.sid[0] = an[st].x >> 33;
+			m.sid[1] = ((uint32_t)an[st].x) >> 1;
+			m.n[0] = cnt[m.sid[0]];
+			m.n[1] = cnt[m.sid[1]];
+			m.rev = (an[st].x>>32&1) ^ (an[st].x&1);
+			m.sim = pow(2.0 * m.m / (m.n[0] + m.n[1]), 1.0 / k);
+			if (m.sim >= min_sim) {
+				if (n_ma == m_ma) PT_EXPAND(ma, m_ma);
+				ma[n_ma++] = m;
+			}
+end_chain:	st = i;
+		}
+	}
+	free(b);
+	free(a);
+	*n_ma_ = n_ma;
+	return ma;
+}
+
+pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g, int32_t *n_ma_)
 {
 	int64_t n_an;
 	uint32_t n_mz, *cnt;
+	int32_t n_ma;
 	pt_mz1_t *mz;
 	pt128_t *an = 0;
+	pt_match_t *ma;
 
 	mz = pt_collect_minimizers(opt, g, &n_mz);
 	PT_CALLOC(cnt, g->n_seg);
 	an = pt_collect_anchors(n_mz, mz, opt->max_occ, &n_an, cnt);
 	free(mz);
-
+	ma = pt_cal_sim(n_an, an, cnt, opt->k, opt->min_cnt, opt->min_sim, &n_ma);
 	free(cnt);
 	free(an);
+	*n_ma_ = n_ma;
+	return ma;
 }
