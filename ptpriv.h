@@ -15,8 +15,6 @@
 #define kroundup64(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, (x)|=(x)>>32, ++(x))
 #endif
 
-extern uint32_t pt_verbose;
-
 void pt_sketch(const char *str, int len, int w, int k, uint32_t rid, int is_hpc, pt_mz1_v *p); // in sketch.c
 void radix_sort_pt128x(pt128_t *st, pt128_t *en);
 

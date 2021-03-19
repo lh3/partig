@@ -21,7 +21,13 @@ typedef struct {
 	int32_t max_occ;
 } pt_pdopt_t;
 
+extern uint32_t pt_verbose;
+
 void pt_opt_init(pt_pdopt_t *opt);
 void pt_pdist(const pt_pdopt_t *opt, const gfa_t *g);
+
+double pt_cputime(void);
+double pt_realtime(void);
+long pt_peakrss(void);
 
 #endif

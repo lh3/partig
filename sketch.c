@@ -74,7 +74,6 @@ static inline int mzcmp(const pt_mz1_t *a, const pt_mz1_t *b)
  */
 void pt_sketch(const char *str, int len, int w, int k, uint32_t rid, int is_hpc, pt_mz1_v *p)
 {
-	extern void *pt_ct_table;
 	static const pt_mz1_t dummy = { UINT64_MAX, (1<<28) - 1, 0, 0 };
 	uint64_t shift1 = k - 1, mask = (1ULL<<k) - 1, kmer[4] = {0,0,0,0};
 	int i, j, l, buf_pos, min_pos, kmer_span = 0;

@@ -24,14 +24,14 @@ void pt_pdist(const pt_pdopt_t *opt, const gfa_t *g)
 	for (i = 0; i < g->n_seg; ++i)
 		pt_sketch(g->seg[i].seq, g->seg[i].len, opt->w, opt->k, i, opt->is_hpc, &mz);
 	if (pt_verbose >= 3)
-		fprintf(stderr, "[%s] %d minimizers\n", __func__, mz.n);
+		fprintf(stderr, "[%s::%.3f] %d minimizers\n", __func__, pt_realtime(), mz.n);
 	radix_sort_mz(mz.a, mz.a + mz.n);
 
 	// collect anchors
 	for (j = 1, st = 0; j <= mz.n; ++j) {
 		if (j == mz.n || mz.a[j].x != mz.a[st].x) {
 			uint32_t k, l;
-			if (j - st >= 2 && j - st <= opt->max_occ) goto end_anchor;
+			if (j - st == 1 || j - st > opt->max_occ) goto end_anchor;
 			for (k = st; k < j; ++k) {
 				for (l = k + 1; l < j; ++l) {
 					uint32_t span, rev = (mz.a[k].rev != mz.a[l].rev);
@@ -49,7 +49,7 @@ end_anchor:	st = j;
 		}
 	}
 	if (pt_verbose >= 3)
-		fprintf(stderr, "[%s] %ld anchors\n", __func__, (long)n_a);
+		fprintf(stderr, "[%s::%.3f] %ld anchors\n", __func__, pt_realtime(), (long)n_a);
 	radix_sort_pt128x(a, a + n_a);
 
 	free(mz.a);

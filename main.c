@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
 	gfa_t *g;
 	pt_pdopt_t po;
 
+	pt_realtime();
 	pt_opt_init(&po);
 	while ((c = ketopt(&o, argc, argv, 1, "k:w:c:", 0)) >= 0) {
 		if (c == 'k') po.k = atoi(o.arg);
@@ -28,6 +29,8 @@ int main(int argc, char *argv[])
 	}
 
 	g = gfa_read(argv[o.ind]);
+	if (pt_verbose >= 3)
+		fprintf(stderr, "[%s::%.3f] read the graph\n", __func__, pt_realtime());
 	pt_pdist(&po, g);
 	gfa_destroy(g);
 	return 0;
