@@ -30,7 +30,7 @@ static pt_mz1_t *pt_collect_minimizers(const pt_pdopt_t *opt, const gfa_t *g, ui
 	return mz.a;
 }
 
-static pt128_t *pt_collect_anchors(uint32_t n_mz, const pt_mz1_t *mz, int32_t max_occ, int64_t *n_a_, uint32_t *cnt)
+static pt128_t *pt_collect_anchors(const gfa_t *g, uint32_t n_mz, const pt_mz1_t *mz, int32_t max_occ, int64_t *n_a_, uint32_t *cnt)
 {
 	uint32_t st, j;
 	int64_t m_a = 0, n_a = 0;
@@ -43,14 +43,15 @@ static pt128_t *pt_collect_anchors(uint32_t n_mz, const pt_mz1_t *mz, int32_t ma
 				++cnt[mz[k].rid];
 				for (l = k + 1; l < j; ++l) {
 					uint32_t span, rev = (mz[k].rev != mz[l].rev);
+					int32_t lk = g->seg[mz[k].rid].len, ll = g->seg[mz[l].rid].len;
 					if (n_a == m_a) PT_EXPAND(a, m_a);
 					span = mz[l].span;
 					a[n_a].x = (uint64_t)mz[k].rid << 33 | mz[l].rid << 1 | rev;
-					a[n_a++].y = (uint64_t)mz[k].pos << 32 | (mz[l].pos + 1 - span);
+					a[n_a++].y = (uint64_t)mz[k].pos << 32 | (rev? ll - (mz[l].pos + 1 - span) - 1 : mz[l].pos);
 					if (n_a == m_a) PT_EXPAND(a, m_a);
 					span = mz[k].span;
 					a[n_a].x = (uint64_t)mz[l].rid << 33 | mz[k].rid << 1 | rev;
-					a[n_a++].y = (uint64_t)mz[l].rid << 33 | (mz[k].pos + 1 - span);
+					a[n_a++].y = (uint64_t)mz[l].pos << 32 | (rev? lk - (mz[k].pos + 1 - span) - 1 : mz[k].pos);
 				}
 			}
 end_anchor:	st = j;
@@ -140,7 +141,7 @@ pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g, int32_t *n_ma_)
 
 	mz = pt_collect_minimizers(opt, g, &n_mz);
 	PT_CALLOC(cnt, g->n_seg);
-	an = pt_collect_anchors(n_mz, mz, opt->max_occ, &n_an, cnt);
+	an = pt_collect_anchors(g, n_mz, mz, opt->max_occ, &n_an, cnt);
 	free(mz);
 	ma = pt_cal_sim(n_an, an, cnt, opt->k, opt->min_cnt, opt->min_sim, &n_ma);
 	free(cnt);
