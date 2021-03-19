@@ -30,7 +30,7 @@ static pt_mz1_t *pt_collect_minimizers(const pt_pdopt_t *opt, const gfa_t *g, ui
 	return mz.a;
 }
 
-static pt128_t *pt_collect_anchors(const gfa_t *g, uint32_t n_mz, const pt_mz1_t *mz, int32_t max_occ, int64_t *n_a_, uint32_t *cnt)
+static pt128_t *pt_collect_anchors(const gfa_t *g, uint32_t n_mz, const pt_mz1_t *mz, int32_t max_occ, int64_t *n_a_, uint32_t *cnt, uint32_t *ucnt)
 {
 	uint32_t st, j;
 	int64_t m_a = 0, n_a = 0;
@@ -38,6 +38,7 @@ static pt128_t *pt_collect_anchors(const gfa_t *g, uint32_t n_mz, const pt_mz1_t
 	for (j = 1, st = 0; j <= n_mz; ++j) {
 		if (j == n_mz || mz[j].x != mz[st].x) {
 			uint32_t k, l;
+			if (j - st == 1) ++ucnt[mz[st].rid];
 			if (j - st == 1 || j - st > max_occ) goto end_anchor;
 			for (k = st; k < j; ++k) {
 				++cnt[mz[k].rid];
@@ -87,12 +88,13 @@ int32_t pt_lis_64(int32_t n, const uint64_t *a, int32_t *b)
 	return L;
 }
 
-static pt_match_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const uint32_t *cnt, int32_t k, int32_t min_cnt, double min_sim, int32_t *n_ma_)
+static pt_match1_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const uint32_t *cnt, const uint32_t *ucnt, int32_t k, int32_t min_cnt, double min_sim, uint32_t *n_ma_)
 {
 	int64_t st, i, j, max = 0;
 	uint64_t *a;
-	int32_t *b, n_ma = 0, m_ma = 0;
-	pt_match_t *ma = 0;
+	int32_t *b;
+	uint32_t n_ma = 0, m_ma = 0;
+	pt_match1_t *ma = 0;
 	for (st = 0, i = 1; i <= n_an; ++i) // pre-calculate the max size
 		if (i == n_an || an[i].x != an[st].x) {
 			max = max > i - st? max : i - st;
@@ -103,7 +105,7 @@ static pt_match_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const uint32_t *c
 	for (st = 0, i = 1; i <= n_an; ++i) {
 		if (i == n_an || an[i].x != an[st].x) {
 			int32_t l, n = 0;
-			pt_match_t m;
+			pt_match1_t m;
 			if (i - st < min_cnt) goto end_chain;
 			for (j = st; j < i; ++j)
 				a[n++] = an[j].y;
@@ -115,6 +117,8 @@ static pt_match_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const uint32_t *c
 			m.sid[1] = ((uint32_t)an[st].x) >> 1;
 			m.n[0] = cnt[m.sid[0]];
 			m.n[1] = cnt[m.sid[1]];
+			m.uni[0] = ucnt[0];
+			m.uni[1] = ucnt[1];
 			m.rev = (an[st].x>>32&1) ^ (an[st].x&1);
 			m.sim = pow(2.0 * m.m / (m.n[0] + m.n[1]), 1.0 / k);
 			if (m.sim >= min_sim) {
@@ -130,22 +134,41 @@ end_chain:	st = i;
 	return ma;
 }
 
-pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g, int32_t *n_ma_)
+pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g)
 {
+	pt_match_t *ma;
 	int64_t n_an;
-	uint32_t n_mz, *cnt;
-	int32_t n_ma;
+	uint32_t n_mz;
 	pt_mz1_t *mz;
 	pt128_t *an = 0;
-	pt_match_t *ma;
 
+	PT_CALLOC(ma, 1);
 	mz = pt_collect_minimizers(opt, g, &n_mz);
-	PT_CALLOC(cnt, g->n_seg);
-	an = pt_collect_anchors(g, n_mz, mz, opt->max_occ, &n_an, cnt);
+	PT_CALLOC(ma->cnt, g->n_seg);
+	PT_CALLOC(ma->ucnt, g->n_seg);
+	an = pt_collect_anchors(g, n_mz, mz, opt->max_occ, &n_an, ma->cnt, ma->ucnt);
 	free(mz);
-	ma = pt_cal_sim(n_an, an, cnt, opt->k, opt->min_cnt, opt->min_sim, &n_ma);
-	free(cnt);
+	ma->ma = pt_cal_sim(n_an, an, ma->cnt, ma->ucnt, opt->k, opt->min_cnt, opt->min_sim, &ma->n_ma);
 	free(an);
-	*n_ma_ = n_ma;
 	return ma;
+}
+
+void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma)
+{
+	uint32_t i;
+	for (i = 0; i < g->n_seg; ++i) {
+		const gfa_seg_t *s = &g->seg[i];
+		fprintf(fp, "C\t%s\t%d\t%d\t%d\n", s->name, s->len, ma->cnt[i], ma->ucnt[i]);
+	}
+	for (i = 0; i < ma->n_ma; ++i) {
+		const pt_match1_t *m = &ma->ma[i];
+		fprintf(fp, "S\t%s\t%s\t%c\t%d\t%d\t%d\t%.6f\n", g->seg[m->sid[0]].name, g->seg[m->sid[1]].name,
+				"+-"[!!m->rev], m->n[0], m->n[1], m->m, m->sim);
+	}
+}
+
+void pt_match_free(pt_match_t *ma)
+{
+	free(ma->cnt); free(ma->ucnt); free(ma->ma);
+	free(ma);
 }

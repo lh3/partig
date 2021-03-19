@@ -2,6 +2,7 @@
 #define PARTIG_H
 
 #include <stdint.h>
+#include <stdio.h>
 #include "gfa.h"
 
 #define PT_VERSION "0.0.0-dirty"
@@ -26,14 +27,21 @@ typedef struct {
 } pt_pdopt_t;
 
 typedef struct {
-	uint32_t sid[2], n[2], m, rev;
+	uint32_t sid[2], n[2], uni[2], m, rev;
 	double sim;
+} pt_match1_t;
+
+typedef struct {
+	uint32_t *cnt, *ucnt, n_ma;
+	pt_match1_t *ma;
 } pt_match_t;
 
 extern uint32_t pt_verbose;
 
 void pt_opt_init(pt_pdopt_t *opt);
-pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g, int32_t *n_ma_);
+pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g);
+void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma);
+void pt_match_free(pt_match_t *ma);
 
 double pt_cputime(void);
 double pt_realtime(void);
