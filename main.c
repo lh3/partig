@@ -9,8 +9,9 @@ void pt_pdist_print(FILE *fp, const gfa_t *g, int32_t n_ma, const pt_match_t *ma
 	int32_t i;
 	for (i = 0; i < n_ma; ++i) {
 		const pt_match_t *m = &ma[i];
-		fprintf(fp, "%s\t%s\t%c\t%d\t%d\t%d\t%.6f\n", g->seg[m->sid[0]].name, g->seg[m->sid[1]].name,
-				"+-"[!!m->rev], m->n[0], m->n[1], m->m, m->sim);
+		fprintf(fp, "%s\t%d\t%d\t%c\t%s\t%d\t%d\t%d\t%.6f\n", g->seg[m->sid[0]].name, g->seg[m->sid[0]].len, m->n[0],
+				"+-"[!!m->rev], g->seg[m->sid[1]].name, g->seg[m->sid[1]].len, m->n[1],
+				m->m, m->sim);
 	}
 }
 

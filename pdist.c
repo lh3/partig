@@ -12,7 +12,7 @@ void pt_opt_init(pt_pdopt_t *opt)
 	opt->k = 51, opt->w = 51, opt->is_hpc = 1;
 	opt->max_occ = 20;
 	opt->min_cnt = 5;
-	opt->min_sim = 0.1;
+	opt->min_sim = 0.9;
 }
 
 static pt_mz1_t *pt_collect_minimizers(const pt_pdopt_t *opt, const gfa_t *g, uint32_t *n_mz_)
