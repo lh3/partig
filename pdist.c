@@ -13,6 +13,7 @@ void pt_opt_init(pt_pdopt_t *opt)
 	opt->max_occ = 20;
 	opt->min_cnt = 5;
 	opt->min_sim = 0.9;
+	opt->diff_thres = 0.5;
 }
 
 static pt_mz1_t *pt_collect_minimizers(const pt_pdopt_t *opt, const gfa_t *g, uint32_t *n_mz_)
@@ -115,6 +116,7 @@ static pt_match1_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const uint32_t *
 			if (m.m < min_cnt) goto end_chain;
 			m.sid[0] = an[st].x >> 33;
 			m.sid[1] = ((uint32_t)an[st].x) >> 1;
+			if (m.sid[0] == m.sid[1]) goto end_chain;
 			m.n[0] = cnt[m.sid[0]];
 			m.n[1] = cnt[m.sid[1]];
 			m.uni[0] = ucnt[0];
@@ -131,7 +133,56 @@ end_chain:	st = i;
 	free(b);
 	free(a);
 	*n_ma_ = n_ma;
+	if (pt_verbose >= 3)
+		fprintf(stderr, "[%s::%.3f] calculated similarity for %d pairs of unitigs\n", __func__, pt_realtime(), n_ma);
 	return ma;
+}
+
+static void pt_pdist_idx(pt_match_t *ma)
+{
+	uint32_t st, i;
+	PT_CALLOC(ma->idx, ma->n_seg);
+	for (st = 0, i = 1; i <= ma->n_ma; ++i)
+		if (i == ma->n_ma || ma->ma[i].sid[0] != ma->ma[st].sid[0])
+			ma->idx[ma->ma[i].sid[0]] = (uint64_t)st << 32 | (i - st), st = i;
+}
+
+static void pt_pdist_mark_pair(pt_match_t *ma, uint8_t *mark, uint32_t sid1, uint32_t sid2)
+{
+	uint32_t o = ma->idx[sid1] >> 32;
+	uint32_t n = (uint32_t)ma->idx[sid1], j;
+	for (j = o; j < o + n; ++j)
+		if (ma->ma[j].sid[1] == sid2)
+			mark[j] = 2;
+}
+
+static void pt_pdist_flt(pt_match_t *ma, int32_t min_cnt, double diff_thres)
+{
+	uint32_t i, k;
+	uint8_t *mark;
+	PT_CALLOC(mark, ma->n_ma);
+	for (i = 0; i < ma->n_seg; ++i) {
+		uint32_t o = ma->idx[i] >> 32;
+		uint32_t n = (uint32_t)ma->idx[i];
+		uint32_t j, max = 0;
+		if (n == 0) continue;
+		for (j = o; j < o + n; ++j)
+			max = max > ma->ma[j].m? max : ma->ma[j].m;
+		for (j = o; j < o + n; ++j) {
+			if (ma->ma[j].m >= max * diff_thres || ma->ma[j].m + min_cnt >= max)
+				mark[j] = 1;
+		}
+		for (j = o; j < o + n; ++j)
+			if (mark[j] == 1)
+				pt_pdist_mark_pair(ma, mark, ma->ma[j].sid[1], ma->ma[j].sid[0]);
+	}
+	for (i = k = 0; i < ma->n_ma; ++i)
+		if (mark[i]) ma->ma[k++] = ma->ma[i];
+	ma->n_ma = k;
+	free(mark);
+	pt_pdist_idx(ma);
+	if (pt_verbose >= 3)
+		fprintf(stderr, "[%s::%.3f] %d pairs of unitigs remain after filtering\n", __func__, pt_realtime(), ma->n_ma);
 }
 
 pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g)
@@ -143,6 +194,7 @@ pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g)
 	pt128_t *an = 0;
 
 	PT_CALLOC(ma, 1);
+	ma->n_seg = g->n_seg;
 	mz = pt_collect_minimizers(opt, g, &n_mz);
 	PT_CALLOC(ma->cnt, g->n_seg);
 	PT_CALLOC(ma->ucnt, g->n_seg);
@@ -150,6 +202,8 @@ pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g)
 	free(mz);
 	ma->ma = pt_cal_sim(n_an, an, ma->cnt, ma->ucnt, opt->k, opt->min_cnt, opt->min_sim, &ma->n_ma);
 	free(an);
+	pt_pdist_idx(ma);
+	pt_pdist_flt(ma, opt->min_cnt, opt->diff_thres);
 	return ma;
 }
 
@@ -169,6 +223,6 @@ void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma)
 
 void pt_match_free(pt_match_t *ma)
 {
-	free(ma->cnt); free(ma->ucnt); free(ma->ma);
+	free(ma->idx); free(ma->cnt); free(ma->ucnt); free(ma->ma);
 	free(ma);
 }

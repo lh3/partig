@@ -23,7 +23,7 @@ typedef struct {
 	int32_t k, w, is_hpc;
 	int32_t max_occ;
 	int32_t min_cnt;
-	double min_sim;
+	double min_sim, diff_thres;
 } pt_pdopt_t;
 
 typedef struct {
@@ -32,7 +32,8 @@ typedef struct {
 } pt_match1_t;
 
 typedef struct {
-	uint32_t *cnt, *ucnt, n_ma;
+	uint32_t *cnt, *ucnt, n_ma, n_seg;
+	uint64_t *idx;
 	pt_match1_t *ma;
 } pt_match_t;
 
