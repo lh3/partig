@@ -147,13 +147,14 @@ static void pt_pdist_idx(pt_match_t *ma)
 			ma->idx[ma->ma[st].sid[0]] = (uint64_t)st << 32 | (i - st), st = i;
 }
 
-static void pt_pdist_mark_pair(pt_match_t *ma, uint8_t *mark, uint32_t sid1, uint32_t sid2)
+static uint32_t pt_pdist_mark_pair(const pt_match_t *ma, uint8_t *mark, uint32_t sid1, uint32_t sid2)
 {
-	uint32_t o = ma->idx[sid1] >> 32;
+	uint32_t o = ma->idx[sid1] >> 32, c = 0;
 	uint32_t n = (uint32_t)ma->idx[sid1], j;
 	for (j = o; j < o + n; ++j)
 		if (ma->ma[j].sid[1] == sid2)
-			mark[j] = 2;
+			mark[j] = 1, ++c;
+	return c;
 }
 
 static void pt_pdist_flt(pt_match_t *ma, int32_t min_cnt, double diff_thres)
@@ -172,9 +173,12 @@ static void pt_pdist_flt(pt_match_t *ma, int32_t min_cnt, double diff_thres)
 			if (ma->ma[j].m >= max * diff_thres || ma->ma[j].m + min_cnt >= max)
 				mark[j] = 1;
 	}
-	for (i = 0; i < ma->n_ma; ++i)
-		if (mark[i])
-			pt_pdist_mark_pair(ma, mark, ma->ma[i].sid[1], ma->ma[i].sid[0]);
+	for (i = 0; i < ma->n_ma; ++i) {
+		uint32_t c;
+		if (mark[i] == 0) continue;
+		c = pt_pdist_mark_pair(ma, mark, ma->ma[i].sid[1], ma->ma[i].sid[0]);
+		if (c == 0) mark[i] = 0;
+	}
 	for (i = k = 0; i < ma->n_ma; ++i)
 		if (mark[i]) ma->ma[k++] = ma->ma[i];
 	ma->n_ma = k;
