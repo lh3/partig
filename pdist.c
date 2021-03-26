@@ -144,7 +144,7 @@ static void pt_pdist_idx(pt_match_t *ma)
 	PT_CALLOC(ma->idx, ma->n_seg);
 	for (st = 0, i = 1; i <= ma->n_ma; ++i)
 		if (i == ma->n_ma || ma->ma[i].sid[0] != ma->ma[st].sid[0])
-			ma->idx[ma->ma[i].sid[0]] = (uint64_t)st << 32 | (i - st), st = i;
+			ma->idx[ma->ma[st].sid[0]] = (uint64_t)st << 32 | (i - st), st = i;
 }
 
 static void pt_pdist_mark_pair(pt_match_t *ma, uint8_t *mark, uint32_t sid1, uint32_t sid2)
@@ -168,14 +168,13 @@ static void pt_pdist_flt(pt_match_t *ma, int32_t min_cnt, double diff_thres)
 		if (n == 0) continue;
 		for (j = o; j < o + n; ++j)
 			max = max > ma->ma[j].m? max : ma->ma[j].m;
-		for (j = o; j < o + n; ++j) {
+		for (j = o; j < o + n; ++j)
 			if (ma->ma[j].m >= max * diff_thres || ma->ma[j].m + min_cnt >= max)
 				mark[j] = 1;
-		}
-		for (j = o; j < o + n; ++j)
-			if (mark[j] == 1)
-				pt_pdist_mark_pair(ma, mark, ma->ma[j].sid[1], ma->ma[j].sid[0]);
 	}
+	for (i = 0; i < ma->n_ma; ++i)
+		if (mark[i])
+			pt_pdist_mark_pair(ma, mark, ma->ma[i].sid[1], ma->ma[i].sid[0]);
 	for (i = k = 0; i < ma->n_ma; ++i)
 		if (mark[i]) ma->ma[k++] = ma->ma[i];
 	ma->n_ma = k;

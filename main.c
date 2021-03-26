@@ -34,6 +34,10 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "[%s::%.3f] read the graph\n", __func__, pt_realtime());
 	ma = pt_pdist(&po, g);
 	pt_match_print(stdout, g, ma);
+	uint64_t *group = pt_cc(ma);
+	for (i = 0; i < ma->n_seg; ++i)
+		printf("G\t%d\t%s\n", (uint32_t)(group[i]>>32), g->seg[(uint32_t)group[i]].name);
+
 	pt_match_free(ma);
 	gfa_destroy(g);
 

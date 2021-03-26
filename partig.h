@@ -43,6 +43,7 @@ void pt_opt_init(pt_pdopt_t *opt);
 pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g);
 void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma);
 void pt_match_free(pt_match_t *ma);
+uint64_t *pt_cc(pt_match_t *ma);
 
 double pt_cputime(void);
 double pt_realtime(void);

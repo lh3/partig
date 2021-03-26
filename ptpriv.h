@@ -1,6 +1,7 @@
 #ifndef PTPRIV_H
 #define PTPRIV_H
 
+#include <stdlib.h>
 #include "partig.h"
 
 #define PT_MALLOC(ptr, len) ((ptr) = (__typeof__(ptr))malloc((len) * sizeof(*(ptr))))
