@@ -147,14 +147,46 @@ static void pt_pdist_idx(pt_match_t *ma)
 			ma->idx[ma->ma[st].sid[0]] = (uint64_t)st << 32 | (i - st), st = i;
 }
 
-static uint32_t pt_pdist_mark_pair(const pt_match_t *ma, uint8_t *mark, uint32_t sid1, uint32_t sid2)
+static int pt_pdist_has_rev(const pt_match_t *ma, uint32_t sid1, uint32_t sid2, uint32_t r)
 {
-	uint32_t o = ma->idx[sid1] >> 32, c = 0;
+	uint32_t o = ma->idx[sid1] >> 32;
 	uint32_t n = (uint32_t)ma->idx[sid1], j;
 	for (j = o; j < o + n; ++j)
-		if (ma->ma[j].sid[1] == sid2)
-			mark[j] = 1, ++c;
-	return c;
+		if (ma->ma[j].sid[1] == sid2 && ma->ma[j].rev == r)
+			return 1;
+	return 0;
+}
+
+uint32_t pt_pdist_symm(pt_match_t *ma)
+{
+	uint8_t *del;
+	uint32_t i, k, n = 0;
+	PT_CALLOC(del, ma->n_ma);
+	for (i = 0; i < ma->n_ma; ++i) {
+		pt_match1_t *m = &ma->ma[i];
+		if (m->sid[0] == m->sid[1]) del[i] = 1, ++n;
+		else if (!pt_pdist_has_rev(ma, m->sid[1], m->sid[0], m->rev))
+			del[i] = 1, ++n;
+	}
+	if (n > 0) {
+		for (i = k = 0; i < ma->n_ma; ++i)
+			if (!del[i]) ma->ma[k++] = ma->ma[i];
+		ma->n_ma = k;
+		pt_pdist_idx(ma);
+	}
+	free(del);
+	if (pt_verbose >= 3)
+		fprintf(stderr, "[%s::%.3f] dropped %d one directional edges; %d remain\n", __func__, pt_realtime(), n, ma->n_ma);
+	return n;
+}
+
+static void pt_pdist_mark_pair(const pt_match_t *ma, uint8_t *mark, uint32_t sid1, uint32_t sid2, uint32_t r)
+{
+	uint32_t o = ma->idx[sid1] >> 32;
+	uint32_t n = (uint32_t)ma->idx[sid1], j;
+	for (j = o; j < o + n; ++j)
+		if (ma->ma[j].sid[1] == sid2 && ma->ma[j].rev == r)
+			mark[j] = 1;
 }
 
 static void pt_pdist_flt(pt_match_t *ma, int32_t min_cnt, double diff_thres)
@@ -173,12 +205,9 @@ static void pt_pdist_flt(pt_match_t *ma, int32_t min_cnt, double diff_thres)
 			if (ma->ma[j].m >= max * diff_thres || ma->ma[j].m + min_cnt >= max)
 				mark[j] = 1;
 	}
-	for (i = 0; i < ma->n_ma; ++i) {
-		uint32_t c;
-		if (mark[i] == 0) continue;
-		c = pt_pdist_mark_pair(ma, mark, ma->ma[i].sid[1], ma->ma[i].sid[0]);
-		if (c == 0) mark[i] = 0;
-	}
+	for (i = 0; i < ma->n_ma; ++i)
+		if (mark[i])
+			pt_pdist_mark_pair(ma, mark, ma->ma[i].sid[1], ma->ma[i].sid[0], ma->ma[i].rev);
 	for (i = k = 0; i < ma->n_ma; ++i)
 		if (mark[i]) ma->ma[k++] = ma->ma[i];
 	ma->n_ma = k;
@@ -206,7 +235,9 @@ pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g)
 	ma->ma = pt_cal_sim(n_an, an, ma->cnt, ma->ucnt, opt->k, opt->min_cnt, opt->min_sim, &ma->n_ma);
 	free(an);
 	pt_pdist_idx(ma);
+	pt_pdist_symm(ma);
 	pt_pdist_flt(ma, opt->min_cnt, opt->diff_thres);
+	pt_pdist_symm(ma);
 	return ma;
 }
 
