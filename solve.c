@@ -201,18 +201,21 @@ uint32_t pt_solve1(const pt_svopt_t *opt, const pt_match_t *ma, uint32_t off, ui
 	// optimize
 	sc_opt = pt_solve1_optimize(ma, opt->topn, off, cnt, x, aux, &n_iter);
 	for (j = 0; j < cnt; ++j)
-		aux->s_tmp[aux->shuffled[i]] = aux->s[aux->shuffled[i]];
+		aux->s_tmp[aux->shuffled[j]] = aux->s[aux->shuffled[j]];
 	for (k = 0; k < opt->n_perturb; ++k) {
 		pt_solve1_perturb(opt, ma, off, cnt, x, aux);
 		sc = pt_solve1_optimize(ma, opt->topn, off, cnt, x, aux, &n_iter);
 		if (sc > sc_opt) {
 			for (j = 0; j < cnt; ++j)
-				aux->s_tmp[aux->shuffled[i]] = aux->s[aux->shuffled[i]];
+				aux->s_tmp[aux->shuffled[j]] = aux->s[aux->shuffled[j]];
 			sc_opt = sc;
+		} else {
+			for (j = 0; j < cnt; ++j)
+				aux->s[aux->shuffled[j]] = aux->s_tmp[aux->shuffled[j]];
 		}
 	}
 	for (j = 0; j < cnt; ++j)
-		aux->s[aux->shuffled[i]] = aux->s_tmp[aux->shuffled[i]];
+		aux->s[aux->shuffled[j]] = aux->s_tmp[aux->shuffled[j]];
 	fprintf(stderr, "[%s] group:%d, size:%d, #edges:%d, #iter:%d, sc_ori:%ld, sc_opt:%ld\n", __func__,
 			(uint32_t)(ma->cc[off]>>32), cnt, aux->n, n_iter, (long)sc_ori, (long)sc_opt);
 	return n_iter;
