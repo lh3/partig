@@ -14,6 +14,7 @@ void pt_opt_init(pt_pdopt_t *opt)
 	opt->min_cnt = 5;
 	opt->min_sim = 0.9;
 	opt->diff_thres = 0.5;
+	opt->topn = 5;
 }
 
 static pt_mz1_t *pt_collect_minimizers(const pt_pdopt_t *opt, const gfa_t *g, uint32_t *n_mz_)

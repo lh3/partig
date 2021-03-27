@@ -72,7 +72,7 @@ static inline double kr_drand_r(uint64_t *x)
 
 typedef struct {
 	uint32_t m, n;
-	uint64_t *a;
+	uint64_t *a, *buf;
 	int8_t *s;
 } solve_aux_t;
 
@@ -97,7 +97,7 @@ static void ks_shuffle_uint32_t(size_t n, uint32_t a[], uint64_t *x)
 	}
 }
 
-uint32_t pt_solve1(const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x, solve_aux_t *aux)
+uint32_t pt_solve1(const pt_match_t *ma, int32_t topn, uint32_t off, uint32_t cnt, uint64_t *x, solve_aux_t *aux)
 {
 	uint32_t i, n_iter = 0, *b;
 	int64_t sc_ori, sc_opt;
@@ -144,10 +144,14 @@ uint32_t pt_solve1(const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x
 			uint32_t n = (uint32_t)ma->idx[k], j;
 			uint32_t z[2];
 			int8_t s;
-			z[0] = z[1] = 0;
 			for (j = 0; j < n; ++j) {
 				const pt_match1_t *m = &ma->ma[o + j];
 				assert(m->sid[0] == k);
+				aux->buf[j] = (uint64_t)((uint32_t)-1 - m->m) << 32 | (o + j);
+			}
+			radix_sort_gfa64(aux->buf, aux->buf + n);
+			for (j = 0, z[0] = z[1] = 0; j < n && j < topn; ++j) {
+				const pt_match1_t *m = &ma->ma[(uint32_t)aux->buf[j]];
 				if (aux->s[m->sid[1]] > 0) z[0] += m->m;
 				else if (aux->s[m->sid[1]] < 0) z[1] += m->m;
 			}
@@ -165,44 +169,56 @@ uint32_t pt_solve1(const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x
 	return n_iter;
 }
 
-int8_t *pt_solve_core(const pt_match_t *ma, uint64_t x)
+int8_t *pt_solve_core(const pt_match_t *ma, int32_t topn, uint64_t x)
 {
 	int8_t *s;
-	uint32_t st, i;
+	uint32_t st, i, max = 0;
 	solve_aux_t *aux;
 	PT_CALLOC(aux, 1);
 	PT_CALLOC(aux->s, ma->n_seg);
+	for (i = 0; i < ma->n_seg; ++i) {
+		uint32_t n = (uint32_t)ma->idx[i];
+		max = max > n? max : n;
+	}
+	PT_MALLOC(aux->buf, max);
 	for (st = 0, i = 1; i <= ma->n_seg; ++i) {
 		if (i == ma->n_seg || ma->cc[st]>>32 != ma->cc[i]>>32) {
 			if (i - st >= 2)
-				pt_solve1(ma, st, i - st, &x, aux);
+				pt_solve1(ma, topn, st, i - st, &x, aux);
 			st = i;
 		}
 	}
 	s = aux->s;
-	free(aux->a);
+	free(aux->a); free(aux->buf);
 	free(aux);
 	return s;
 }
 
-void pt_solve(pt_match_t *ma, uint64_t x)
+void pt_solve(pt_match_t *ma, int32_t topn, uint64_t x)
 {
 	uint32_t i;
 	int8_t *s;
+	uint64_t *buf;
 	pt_cc(ma);
-	s = pt_solve_core(ma, x);
+	s = pt_solve_core(ma, topn, x);
+	PT_MALLOC(buf, ma->n_ma); // FIXME: this is over-allocation for convenience
 	for (i = 0; i < ma->n_seg; ++i) {
 		uint32_t z[2];
 		uint32_t o = ma->idx[i] >> 32;
 		uint32_t n = (uint32_t)ma->idx[i], j;
 		ma->info[i].s = s[i];
-		z[0] = z[1] = 0;
 		for (j = 0; j < n; ++j) {
 			const pt_match1_t *m = &ma->ma[o + j];
+			buf[j] = (uint64_t)((uint32_t)-1 - m->m) << 32 | (o + j);
+		}
+		radix_sort_gfa64(buf, buf + n);
+		for (j = 0, z[0] = z[1] = 0; j < n; ++j) {
+			const pt_match1_t *m = &ma->ma[(uint32_t)buf[j]];
 			if (s[m->sid[1]] > 0) z[0] += m->m;
 			else if (s[m->sid[1]] < 0) z[1] += m->m;
 		}
 		ma->info[i].m[0] = z[0], ma->info[i].m[1] = z[1];
 	}
+	free(buf);
 	free(s);
 }
