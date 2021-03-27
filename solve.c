@@ -51,7 +51,7 @@ uint64_t *pt_cc_core(const pt_match_t *ma)
 
 void pt_cc(pt_match_t *ma)
 {
-	ma->group = pt_cc_core(ma);
+	ma->cc = pt_cc_core(ma);
 }
 
 static inline uint64_t kr_splitmix64(uint64_t x)
@@ -106,7 +106,7 @@ uint32_t pt_solve1(const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x
 	// find the initial states
 	aux->n = 0;
 	for (i = 0; i < cnt; ++i) {
-		uint32_t k = (uint32_t)ma->group[off + i];
+		uint32_t k = (uint32_t)ma->cc[off + i];
 		uint32_t o = ma->idx[k] >> 32;
 		uint32_t n = (uint32_t)ma->idx[k], j;
 		for (j = 0; j < n; ++j) {
@@ -133,7 +133,7 @@ uint32_t pt_solve1(const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x
 	if (cnt == 2) return 0;
 	PT_MALLOC(b, cnt);
 	for (i = 0; i < cnt; ++i)
-		b[i] = (uint32_t)ma->group[off + i];
+		b[i] = (uint32_t)ma->cc[off + i];
 	while (1) {
 		uint32_t n_flip = 0;
 		++n_iter;
@@ -161,7 +161,7 @@ uint32_t pt_solve1(const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x
 	free(b);
 	sc_opt = pt_score(ma, aux);
 	fprintf(stderr, "[%s] group:%d, size:%d, #edges:%d, #iter:%d, sc_ori:%ld, sc_opt:%ld\n", __func__,
-			(uint32_t)(ma->group[off]>>32), cnt, aux->n, n_iter, (long)sc_ori, (long)sc_opt);
+			(uint32_t)(ma->cc[off]>>32), cnt, aux->n, n_iter, (long)sc_ori, (long)sc_opt);
 	return n_iter;
 }
 
@@ -173,7 +173,7 @@ int8_t *pt_solve_core(const pt_match_t *ma, uint64_t x)
 	PT_CALLOC(aux, 1);
 	PT_CALLOC(aux->s, ma->n_seg);
 	for (st = 0, i = 1; i <= ma->n_seg; ++i) {
-		if (i == ma->n_seg || ma->group[st]>>32 != ma->group[i]>>32) {
+		if (i == ma->n_seg || ma->cc[st]>>32 != ma->cc[i]>>32) {
 			if (i - st >= 2)
 				pt_solve1(ma, st, i - st, &x, aux);
 			st = i;
@@ -187,6 +187,11 @@ int8_t *pt_solve_core(const pt_match_t *ma, uint64_t x)
 
 void pt_solve(pt_match_t *ma, uint64_t x)
 {
+	uint32_t i;
+	int8_t *s;
 	pt_cc(ma);
-	ma->s = pt_solve_core(ma, x);
+	s = pt_solve_core(ma, x);
+	for (i = 0; i < ma->n_seg; ++i)
+		ma->info[i].s = s[i];
+	free(s);
 }

@@ -31,7 +31,7 @@ static pt_mz1_t *pt_collect_minimizers(const pt_pdopt_t *opt, const gfa_t *g, ui
 	return mz.a;
 }
 
-static pt128_t *pt_collect_anchors(const gfa_t *g, uint32_t n_mz, const pt_mz1_t *mz, int32_t max_occ, int64_t *n_a_, uint32_t *cnt, uint32_t *ucnt)
+static pt128_t *pt_collect_anchors(const gfa_t *g, uint32_t n_mz, const pt_mz1_t *mz, int32_t max_occ, int64_t *n_a_, pt_uinfo_t *info)
 {
 	uint32_t st, j;
 	int64_t m_a = 0, n_a = 0;
@@ -39,10 +39,10 @@ static pt128_t *pt_collect_anchors(const gfa_t *g, uint32_t n_mz, const pt_mz1_t
 	for (j = 1, st = 0; j <= n_mz; ++j) {
 		if (j == n_mz || mz[j].x != mz[st].x) {
 			uint32_t k, l;
-			if (j - st == 1) ++ucnt[mz[st].rid];
+			if (j - st == 1) ++info[mz[st].rid].cnt1;
 			if (j - st == 1 || j - st > max_occ) goto end_anchor;
 			for (k = st; k < j; ++k) {
-				++cnt[mz[k].rid];
+				++info[mz[k].rid].cnt2;
 				for (l = k + 1; l < j; ++l) {
 					uint32_t span, rev = (mz[k].rev != mz[l].rev);
 					int32_t lk = g->seg[mz[k].rid].len, ll = g->seg[mz[l].rid].len;
@@ -89,7 +89,7 @@ int32_t pt_lis_64(int32_t n, const uint64_t *a, int32_t *b)
 	return L;
 }
 
-static pt_match1_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const uint32_t *cnt, const uint32_t *ucnt, int32_t k, int32_t min_cnt, double min_sim, uint32_t *n_ma_)
+static pt_match1_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const pt_uinfo_t *info, int32_t k, int32_t min_cnt, double min_sim, uint32_t *n_ma_)
 {
 	int64_t st, i, j, max = 0;
 	uint64_t *a;
@@ -106,6 +106,7 @@ static pt_match1_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const uint32_t *
 	for (st = 0, i = 1; i <= n_an; ++i) {
 		if (i == n_an || an[i].x != an[st].x) {
 			int32_t l, n = 0;
+			uint32_t nn[2];
 			pt_match1_t m;
 			if (i - st < min_cnt) goto end_chain;
 			for (j = st; j < i; ++j)
@@ -117,10 +118,10 @@ static pt_match1_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const uint32_t *
 			m.sid[0] = an[st].x >> 33;
 			m.sid[1] = ((uint32_t)an[st].x) >> 1;
 			if (m.sid[0] == m.sid[1]) goto end_chain;
-			m.n[0] = cnt[m.sid[0]];
-			m.n[1] = cnt[m.sid[1]];
+			nn[0] = info[m.sid[0]].cnt2;
+			nn[1] = info[m.sid[1]].cnt2;
 			m.rev = (an[st].x>>32&1) ^ (an[st].x&1);
-			m.sim = pow(2.0 * m.m / (m.n[0] + m.n[1]), 1.0 / k);
+			m.sim = pow(2.0 * m.m / (nn[0] + nn[1]), 1.0 / k);
 			if (m.sim >= min_sim) {
 				if (n_ma == m_ma) PT_EXPAND(ma, m_ma);
 				ma[n_ma++] = m;
@@ -225,13 +226,12 @@ pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g)
 	pt128_t *an = 0;
 
 	PT_CALLOC(ma, 1);
+	PT_CALLOC(ma->info, g->n_seg);
 	ma->n_seg = g->n_seg;
 	mz = pt_collect_minimizers(opt, g, &n_mz);
-	PT_CALLOC(ma->cnt, g->n_seg);
-	PT_CALLOC(ma->ucnt, g->n_seg);
-	an = pt_collect_anchors(g, n_mz, mz, opt->max_occ, &n_an, ma->cnt, ma->ucnt);
+	an = pt_collect_anchors(g, n_mz, mz, opt->max_occ, &n_an, ma->info);
 	free(mz);
-	ma->ma = pt_cal_sim(n_an, an, ma->cnt, ma->ucnt, opt->k, opt->min_cnt, opt->min_sim, &ma->n_ma);
+	ma->ma = pt_cal_sim(n_an, an, ma->info, opt->k, opt->min_cnt, opt->min_sim, &ma->n_ma);
 	free(an);
 	pt_pdist_idx(ma);
 	pt_pdist_symm(ma);
@@ -245,21 +245,20 @@ void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma)
 	uint32_t i;
 	for (i = 0; i < g->n_seg; ++i) {
 		const gfa_seg_t *s = &g->seg[i];
-		fprintf(fp, "C\t%s\t%d\t%d\t%d\t%d\n", s->name, s->len, ma->cnt[i], ma->ucnt[i], ma->s? ma->s[i] : 0);
+		fprintf(fp, "C\t%s\t%d\t%d\t%d\t%d\n", s->name, s->len, ma->info[i].cnt2, ma->info[i].cnt1, ma->info[i].s);
 	}
 	for (i = 0; i < ma->n_ma; ++i) {
 		const pt_match1_t *m = &ma->ma[i];
 		fprintf(fp, "S\t%s\t%s\t%c\t%d\t%d\t%d\t%.6f\t%d\t%d\n", g->seg[m->sid[0]].name, g->seg[m->sid[1]].name,
-				"+-"[!!m->rev], m->n[0], m->n[1], m->m, m->sim,
-				ma->s? ma->s[m->sid[0]] : 0, ma->s? ma->s[m->sid[1]] : 0);
+				"+-"[!!m->rev], ma->info[m->sid[0]].cnt2, ma->info[m->sid[1]].cnt2, m->m, m->sim,
+				ma->info[m->sid[0]].s, ma->info[m->sid[1]].s);
 	}
 	for (i = 0; i < ma->n_seg; ++i)
-		printf("G\t%d\t%s\n", (uint32_t)(ma->group[i]>>32), g->seg[(uint32_t)ma->group[i]].name);
+		printf("G\t%d\t%s\n", (uint32_t)(ma->cc[i]>>32), g->seg[(uint32_t)ma->cc[i]].name);
 }
 
 void pt_match_free(pt_match_t *ma)
 {
-	free(ma->idx); free(ma->cnt); free(ma->ucnt); free(ma->ma);
-	free(ma->s); free(ma->group);
+	free(ma->idx); free(ma->info); free(ma->ma); free(ma->cc);
 	free(ma);
 }
