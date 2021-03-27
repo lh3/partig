@@ -88,13 +88,21 @@ typedef struct {
 	int8_t *s, *s_tmp;
 } solve_aux_t;
 
-static int64_t pt_score(const pt_match_t *ma, solve_aux_t *aux)
+static int64_t pt_score(const pt_match_t *ma, int32_t topn, uint32_t cnt, solve_aux_t *aux)
 {
 	uint32_t i;
 	int64_t z = 0;
-	for (i = 0; i < aux->n; ++i) {
-		const pt_match1_t *m = &ma->ma[(uint32_t)aux->a[i]];
-		z += -(int64_t)m->m * aux->s[m->sid[0]] * aux->s[m->sid[1]];
+	for (i = 0; i < cnt; ++i) {
+		uint32_t k = aux->shuffled[i];
+		uint32_t o = ma->idx[k] >> 32;
+		uint32_t n = (uint32_t)ma->idx[k], j;
+		for (j = 0; j < n; ++j)
+			aux->buf[j] = (uint64_t)((uint32_t)-1 - ma->ma[o + j].m) << 32 | (o + j);
+		radix_sort_gfa64(aux->buf, aux->buf + n);
+		for (j = 0; j < n && j < topn; ++j) {
+			const pt_match1_t *m = &ma->ma[(uint32_t)aux->buf[j]];
+			z += -(int64_t)m->m * aux->s[m->sid[0]] * aux->s[m->sid[1]];
+		}
 	}
 	return z;
 }
@@ -109,7 +117,7 @@ static void ks_shuffle_uint32_t(size_t n, uint32_t a[], uint64_t *x)
 	}
 }
 
-static int64_t pt_solve1_init_phase(const pt_match_t *ma, uint64_t *x, solve_aux_t *aux)
+static int64_t pt_solve1_init_phase(const pt_match_t *ma, int32_t topn, uint32_t cnt, uint64_t *x, solve_aux_t *aux)
 {
 	uint32_t i;
 	for (i = 0; i < aux->n; ++i) { // from the strongest edge to the weakest
@@ -124,7 +132,7 @@ static int64_t pt_solve1_init_phase(const pt_match_t *ma, uint64_t *x, solve_aux
 			aux->s[m->sid[1]] = -aux->s[m->sid[0]];
 		}
 	}
-	return pt_score(ma, aux);
+	return pt_score(ma, topn, cnt, aux);
 }
 
 static void pt_solve1_perturb(const pt_svopt_t *opt, const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x, solve_aux_t *aux)
@@ -170,7 +178,7 @@ static int64_t pt_solve1_optimize(const pt_match_t *ma, uint32_t topn, uint32_t 
 		}
 		if (n_flip == 0) break;
 	}
-	return pt_score(ma, aux);
+	return pt_score(ma, topn, cnt, aux);
 }
 
 uint32_t pt_solve1(const pt_svopt_t *opt, const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x, solve_aux_t *aux)
@@ -195,7 +203,7 @@ uint32_t pt_solve1(const pt_svopt_t *opt, const pt_match_t *ma, uint32_t off, ui
 	radix_sort_gfa64(aux->a, aux->a + aux->n);
 
 	// first guess
-	sc_ori = pt_solve1_init_phase(ma, x, aux);
+	sc_ori = pt_solve1_init_phase(ma, opt->topn, cnt, x, aux);
 	if (cnt == 2) return 0;
 
 	// optimize
