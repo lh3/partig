@@ -33,7 +33,8 @@ typedef struct {
 
 typedef struct {
 	uint32_t *cnt, *ucnt, n_ma, n_seg;
-	uint64_t *idx;
+	uint64_t *idx, *group;
+	int8_t *s; // phase
 	pt_match1_t *ma;
 } pt_match_t;
 
@@ -43,7 +44,8 @@ void pt_opt_init(pt_pdopt_t *opt);
 pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g);
 void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma);
 void pt_match_free(pt_match_t *ma);
-uint64_t *pt_cc(pt_match_t *ma);
+void pt_cc(pt_match_t *ma);
+void pt_solve(pt_match_t *ma, uint64_t x);
 
 double pt_cputime(void);
 double pt_realtime(void);

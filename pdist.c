@@ -141,6 +141,7 @@ end_chain:	st = i;
 static void pt_pdist_idx(pt_match_t *ma)
 {
 	uint32_t st, i;
+	free(ma->idx);
 	PT_CALLOC(ma->idx, ma->n_seg);
 	for (st = 0, i = 1; i <= ma->n_ma; ++i)
 		if (i == ma->n_ma || ma->ma[i].sid[0] != ma->ma[st].sid[0])
@@ -246,17 +247,21 @@ void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma)
 	uint32_t i;
 	for (i = 0; i < g->n_seg; ++i) {
 		const gfa_seg_t *s = &g->seg[i];
-		fprintf(fp, "C\t%s\t%d\t%d\t%d\n", s->name, s->len, ma->cnt[i], ma->ucnt[i]);
+		fprintf(fp, "C\t%s\t%d\t%d\t%d\t%d\n", s->name, s->len, ma->cnt[i], ma->ucnt[i], ma->s? ma->s[i] : 0);
 	}
 	for (i = 0; i < ma->n_ma; ++i) {
 		const pt_match1_t *m = &ma->ma[i];
-		fprintf(fp, "S\t%s\t%s\t%c\t%d\t%d\t%d\t%.6f\n", g->seg[m->sid[0]].name, g->seg[m->sid[1]].name,
-				"+-"[!!m->rev], m->n[0], m->n[1], m->m, m->sim);
+		fprintf(fp, "S\t%s\t%s\t%c\t%d\t%d\t%d\t%.6f\t%d\t%d\n", g->seg[m->sid[0]].name, g->seg[m->sid[1]].name,
+				"+-"[!!m->rev], m->n[0], m->n[1], m->m, m->sim,
+				ma->s? ma->s[m->sid[0]] : 0, ma->s? ma->s[m->sid[1]] : 0);
 	}
+	for (i = 0; i < ma->n_seg; ++i)
+		printf("G\t%d\t%s\n", (uint32_t)(ma->group[i]>>32), g->seg[(uint32_t)ma->group[i]].name);
 }
 
 void pt_match_free(pt_match_t *ma)
 {
 	free(ma->idx); free(ma->cnt); free(ma->ucnt); free(ma->ma);
+	free(ma->s); free(ma->group);
 	free(ma);
 }

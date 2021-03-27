@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
 {
 	ketopt_t o = KETOPT_INIT;
 	int i, c;
+	uint64_t seed = 11;
 	pt_match_t *ma;
 	gfa_t *g;
 	pt_pdopt_t po;
@@ -33,10 +34,8 @@ int main(int argc, char *argv[])
 	if (pt_verbose >= 3)
 		fprintf(stderr, "[%s::%.3f] read the graph\n", __func__, pt_realtime());
 	ma = pt_pdist(&po, g);
+	pt_solve(ma, seed);
 	pt_match_print(stdout, g, ma);
-	uint64_t *group = pt_cc(ma);
-	for (i = 0; i < ma->n_seg; ++i)
-		printf("G\t%d\t%s\n", (uint32_t)(group[i]>>32), g->seg[(uint32_t)group[i]].name);
 
 	pt_match_free(ma);
 	gfa_destroy(g);
