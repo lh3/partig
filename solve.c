@@ -7,8 +7,8 @@ void pt_svopt_init(pt_svopt_t *opt)
 {
 	memset(opt, 0, sizeof(pt_svopt_t));
 	opt->seed = 11;
-	opt->topn = 5;
-	opt->n_perturb = 10;
+	opt->topn = 1<<30;
+	opt->n_perturb = 100;
 	opt->f_perturb = 0.1;
 }
 
@@ -56,6 +56,8 @@ uint64_t *pt_cc_core(const pt_match_t *ma)
 		}
 	}
 	free(flag);
+	if (pt_verbose >= 3)
+		fprintf(stderr, "[%s::%.3f] identified %d connected components\n", __func__, pt_realtime(), y);
 	return group;
 }
 
@@ -125,8 +127,16 @@ static int64_t pt_solve1_init_phase(const pt_match_t *ma, uint64_t *x, solve_aux
 	return pt_score(ma, aux);
 }
 
-static void pt_solve1_perturb()
+static void pt_solve1_perturb(const pt_svopt_t *opt, const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x, solve_aux_t *aux)
 {
+	uint32_t i;
+	double y;
+	for (i = 0; i < cnt; ++i) {
+		uint32_t k = (uint32_t)ma->cc[off + i];
+		y = kr_drand_r(x);
+		if (y < opt->f_perturb)
+			aux->s[k] = -aux->s[k];
+	}
 }
 
 static int64_t pt_solve1_optimize(const pt_match_t *ma, uint32_t topn, uint32_t off, uint32_t cnt, uint64_t *x, solve_aux_t *aux, uint32_t *n_iter)
@@ -165,8 +175,8 @@ static int64_t pt_solve1_optimize(const pt_match_t *ma, uint32_t topn, uint32_t 
 
 uint32_t pt_solve1(const pt_svopt_t *opt, const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x, solve_aux_t *aux)
 {
-	uint32_t i, n_iter = 0;
-	int64_t sc_ori, sc_opt;
+	uint32_t i, j, k, n_iter = 0;
+	int64_t sc_ori, sc_opt = -(1<<30), sc;
 	if (cnt < 2) return 0;
 
 	// populate aux->a[]
@@ -190,6 +200,19 @@ uint32_t pt_solve1(const pt_svopt_t *opt, const pt_match_t *ma, uint32_t off, ui
 
 	// optimize
 	sc_opt = pt_solve1_optimize(ma, opt->topn, off, cnt, x, aux, &n_iter);
+	for (j = 0; j < cnt; ++j)
+		aux->s_tmp[aux->shuffled[i]] = aux->s[aux->shuffled[i]];
+	for (k = 0; k < opt->n_perturb; ++k) {
+		pt_solve1_perturb(opt, ma, off, cnt, x, aux);
+		sc = pt_solve1_optimize(ma, opt->topn, off, cnt, x, aux, &n_iter);
+		if (sc > sc_opt) {
+			for (j = 0; j < cnt; ++j)
+				aux->s_tmp[aux->shuffled[i]] = aux->s[aux->shuffled[i]];
+			sc_opt = sc;
+		}
+	}
+	for (j = 0; j < cnt; ++j)
+		aux->s[aux->shuffled[i]] = aux->s_tmp[aux->shuffled[i]];
 	fprintf(stderr, "[%s] group:%d, size:%d, #edges:%d, #iter:%d, sc_ori:%ld, sc_opt:%ld\n", __func__,
 			(uint32_t)(ma->cc[off]>>32), cnt, aux->n, n_iter, (long)sc_ori, (long)sc_opt);
 	return n_iter;
@@ -220,6 +243,8 @@ int8_t *pt_solve_core(const pt_svopt_t *opt, const pt_match_t *ma)
 	s = aux->s;
 	free(aux->a); free(aux->buf); free(aux->shuffled); free(aux->s_tmp);
 	free(aux);
+	if (pt_verbose >= 3)
+		fprintf(stderr, "[%s::%.3f] finished partitioning\n", __func__, pt_realtime());
 	return s;
 }
 
