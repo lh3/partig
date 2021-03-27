@@ -245,7 +245,8 @@ void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma)
 	uint32_t i;
 	for (i = 0; i < g->n_seg; ++i) {
 		const gfa_seg_t *s = &g->seg[i];
-		fprintf(fp, "C\t%s\t%d\t%d\t%d\t%d\n", s->name, s->len, ma->info[i].cnt2, ma->info[i].cnt1, ma->info[i].s);
+		const pt_uinfo_t *u = &ma->info[i];
+		fprintf(fp, "C\t%s\t%d\t%d\t%d\t%d\t%d\t%d\n", s->name, s->len, u->cnt2, u->cnt1, u->s, u->m[0], u->m[1]);
 	}
 	for (i = 0; i < ma->n_ma; ++i) {
 		const pt_match1_t *m = &ma->ma[i];

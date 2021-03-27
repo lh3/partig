@@ -33,6 +33,7 @@ typedef struct {
 
 typedef struct {
 	uint32_t cnt2, cnt1;
+	uint32_t m[2];
 	int8_t s;
 } pt_uinfo_t;
 

@@ -191,7 +191,18 @@ void pt_solve(pt_match_t *ma, uint64_t x)
 	int8_t *s;
 	pt_cc(ma);
 	s = pt_solve_core(ma, x);
-	for (i = 0; i < ma->n_seg; ++i)
+	for (i = 0; i < ma->n_seg; ++i) {
+		uint32_t z[2];
+		uint32_t o = ma->idx[i] >> 32;
+		uint32_t n = (uint32_t)ma->idx[i], j;
 		ma->info[i].s = s[i];
+		z[0] = z[1] = 0;
+		for (j = 0; j < n; ++j) {
+			const pt_match1_t *m = &ma->ma[o + j];
+			if (s[m->sid[1]] > 0) z[0] += m->m;
+			else if (s[m->sid[1]] < 0) z[1] += m->m;
+		}
+		ma->info[i].m[0] = z[0], ma->info[i].m[1] = z[1];
+	}
 	free(s);
 }
