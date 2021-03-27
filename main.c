@@ -13,19 +13,20 @@ int main(int argc, char *argv[])
 {
 	ketopt_t o = KETOPT_INIT;
 	int i, c;
-	uint64_t seed = 11;
 	pt_match_t *ma;
 	gfa_t *g;
 	pt_pdopt_t po;
+	pt_svopt_t so;
 
 	pt_realtime();
-	pt_opt_init(&po);
+	pt_pdopt_init(&po);
+	pt_svopt_init(&so);
 	while ((c = ketopt(&o, argc, argv, 1, "k:w:c:t:s:", 0)) >= 0) {
 		if (c == 'k') po.k = atoi(o.arg);
 		else if (c == 'w') po.w = atoi(o.arg);
 		else if (c == 'c') po.max_occ = atoi(o.arg);
-		else if (c == 't') po.topn = atoi(o.arg);
-		else if (c == 's') seed = atol(o.arg);
+		else if (c == 't') so.topn = atoi(o.arg);
+		else if (c == 's') so.seed = atol(o.arg);
 	}
 	if (o.ind == argc) {
 		print_usage(stderr);
@@ -36,7 +37,7 @@ int main(int argc, char *argv[])
 	if (pt_verbose >= 3)
 		fprintf(stderr, "[%s::%.3f] read the graph\n", __func__, pt_realtime());
 	ma = pt_pdist(&po, g);
-	pt_solve(ma, po.topn, seed);
+	pt_solve(&so, ma);
 	pt_match_print(stdout, g, ma);
 
 	pt_match_free(ma);

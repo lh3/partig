@@ -23,9 +23,15 @@ typedef struct {
 	int32_t k, w, is_hpc;
 	int32_t max_occ;
 	int32_t min_cnt;
-	int32_t topn;
 	double min_sim, diff_thres;
 } pt_pdopt_t;
+
+typedef struct {
+	int32_t topn;
+	int32_t n_perturb;
+	uint64_t seed;
+	double f_perturb;
+} pt_svopt_t;
 
 typedef struct {
 	uint32_t sid[2], m, rev;
@@ -49,12 +55,14 @@ typedef struct {
 
 extern uint32_t pt_verbose;
 
-void pt_opt_init(pt_pdopt_t *opt);
+void pt_pdopt_init(pt_pdopt_t *opt);
+void pt_svopt_init(pt_svopt_t *opt);
+
 pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g);
 void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma);
 void pt_match_free(pt_match_t *ma);
 void pt_cc(pt_match_t *ma);
-void pt_solve(pt_match_t *ma, int32_t topn, uint64_t x);
+void pt_solve(const pt_svopt_t *opt, pt_match_t *ma);
 
 double pt_cputime(void);
 double pt_realtime(void);

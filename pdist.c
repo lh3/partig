@@ -6,7 +6,7 @@
 #define mz_key(z) ((z).x)
 KRADIX_SORT_INIT(mz, pt_mz1_t, mz_key, 8)
 
-void pt_opt_init(pt_pdopt_t *opt)
+void pt_pdopt_init(pt_pdopt_t *opt)
 {
 	memset(opt, 0, sizeof(pt_pdopt_t));
 	opt->k = 51, opt->w = 51, opt->is_hpc = 1;
@@ -14,7 +14,6 @@ void pt_opt_init(pt_pdopt_t *opt)
 	opt->min_cnt = 5;
 	opt->min_sim = 0.9;
 	opt->diff_thres = 0.5;
-	opt->topn = 5;
 }
 
 static pt_mz1_t *pt_collect_minimizers(const pt_pdopt_t *opt, const gfa_t *g, uint32_t *n_mz_)
