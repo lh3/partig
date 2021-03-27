@@ -27,7 +27,7 @@ typedef struct {
 } pt_pdopt_t;
 
 typedef struct {
-	uint32_t sid[2], n[2], uni[2], m, rev;
+	uint32_t sid[2], n[2], m, rev;
 	double sim;
 } pt_match1_t;
 

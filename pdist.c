@@ -119,8 +119,6 @@ static pt_match1_t *pt_cal_sim(int64_t n_an, const pt128_t *an, const uint32_t *
 			if (m.sid[0] == m.sid[1]) goto end_chain;
 			m.n[0] = cnt[m.sid[0]];
 			m.n[1] = cnt[m.sid[1]];
-			m.uni[0] = ucnt[0];
-			m.uni[1] = ucnt[1];
 			m.rev = (an[st].x>>32&1) ^ (an[st].x&1);
 			m.sim = pow(2.0 * m.m / (m.n[0] + m.n[1]), 1.0 / k);
 			if (m.sim >= min_sim) {

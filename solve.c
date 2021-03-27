@@ -160,7 +160,7 @@ uint32_t pt_solve1(const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x
 	}
 	free(b);
 	sc_opt = pt_score(ma, aux);
-	fprintf(stderr, "[%s] group:%d, size:%d, #edges:%d, #iter:%d, scOri:%ld, scOpt:%ld\n", __func__,
+	fprintf(stderr, "[%s] group:%d, size:%d, #edges:%d, #iter:%d, sc_ori:%ld, sc_opt:%ld\n", __func__,
 			(uint32_t)(ma->group[off]>>32), cnt, aux->n, n_iter, (long)sc_ori, (long)sc_opt);
 	return n_iter;
 }
