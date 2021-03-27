@@ -84,16 +84,17 @@ static inline double kr_drand_r(uint64_t *x)
 
 typedef struct {
 	uint32_t m, n, *shuffled;
+	uint32_t off, size; // offset in pt_match_t::cc; size of the component
 	uint64_t *a, *buf;
 	int8_t *s, *s_tmp;
 } solve_aux_t;
 
-static int64_t pt_score(const pt_match_t *ma, int32_t topn, uint32_t cnt, solve_aux_t *aux)
+static int64_t pt_score(const pt_match_t *ma, int32_t topn, solve_aux_t *aux)
 {
 	uint32_t i;
 	int64_t z = 0;
-	for (i = 0; i < cnt; ++i) {
-		uint32_t k = aux->shuffled[i];
+	for (i = 0; i < aux->size; ++i) {
+		uint32_t k = (uint32_t)ma->cc[aux->off + i];
 		uint32_t o = ma->idx[k] >> 32;
 		uint32_t n = (uint32_t)ma->idx[k], j;
 		for (j = 0; j < n; ++j)
@@ -117,9 +118,22 @@ static void ks_shuffle_uint32_t(size_t n, uint32_t a[], uint64_t *x)
 	}
 }
 
-static int64_t pt_solve1_init_phase(const pt_match_t *ma, int32_t topn, uint32_t cnt, uint64_t *x, solve_aux_t *aux)
+static int64_t pt_solve1_init_phase(const pt_match_t *ma, int32_t topn, uint64_t *x, solve_aux_t *aux)
 {
 	uint32_t i;
+	aux->n = 0;
+	for (i = 0; i < aux->size; ++i) {
+		uint32_t k = (uint32_t)ma->cc[aux->off + i];
+		uint32_t o = ma->idx[k] >> 32;
+		uint32_t n = (uint32_t)ma->idx[k], j;
+		aux->shuffled[i] = k;
+		for (j = 0; j < n; ++j) {
+			const pt_match1_t *m = &ma->ma[o + j];
+			if (aux->n == aux->m) PT_EXPAND(aux->a, aux->m);
+			aux->a[aux->n++] = (uint64_t)((uint32_t)-1 - m->m) << 32 | (o + j);
+		}
+	}
+	radix_sort_gfa64(aux->a, aux->a + aux->n);
 	for (i = 0; i < aux->n; ++i) { // from the strongest edge to the weakest
 		const pt_match1_t *m = &ma->ma[(uint32_t)aux->a[i]];
 		if (aux->s[m->sid[0]] == 0 && aux->s[m->sid[1]] == 0) {
@@ -132,29 +146,29 @@ static int64_t pt_solve1_init_phase(const pt_match_t *ma, int32_t topn, uint32_t
 			aux->s[m->sid[1]] = -aux->s[m->sid[0]];
 		}
 	}
-	return pt_score(ma, topn, cnt, aux);
+	return pt_score(ma, topn, aux);
 }
 
-static void pt_solve1_perturb(const pt_svopt_t *opt, const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x, solve_aux_t *aux)
+static void pt_solve1_perturb(const pt_svopt_t *opt, const pt_match_t *ma, uint64_t *x, solve_aux_t *aux)
 {
 	uint32_t i;
 	double y;
-	for (i = 0; i < cnt; ++i) {
-		uint32_t k = (uint32_t)ma->cc[off + i];
+	for (i = 0; i < aux->size; ++i) {
+		uint32_t k = (uint32_t)ma->cc[aux->off + i];
 		y = kr_drand_r(x);
 		if (y < opt->f_perturb)
 			aux->s[k] = -aux->s[k];
 	}
 }
 
-static int64_t pt_solve1_optimize(const pt_match_t *ma, uint32_t topn, uint32_t off, uint32_t cnt, uint64_t *x, solve_aux_t *aux, uint32_t *n_iter)
+static int64_t pt_solve1_optimize(const pt_match_t *ma, uint32_t topn, uint64_t *x, solve_aux_t *aux, uint32_t *n_iter)
 {
 	uint32_t i;
 	while (1) {
 		uint32_t n_flip = 0;
 		++(*n_iter);
-		ks_shuffle_uint32_t(cnt, aux->shuffled, x);
-		for (i = 0; i < cnt; ++i) {
+		ks_shuffle_uint32_t(aux->size, aux->shuffled, x);
+		for (i = 0; i < aux->size; ++i) {
 			uint32_t k = aux->shuffled[i];
 			uint32_t o = ma->idx[k] >> 32;
 			uint32_t n = (uint32_t)ma->idx[k], j;
@@ -178,54 +192,39 @@ static int64_t pt_solve1_optimize(const pt_match_t *ma, uint32_t topn, uint32_t 
 		}
 		if (n_flip == 0) break;
 	}
-	return pt_score(ma, topn, cnt, aux);
+	return pt_score(ma, topn, aux);
 }
 
-uint32_t pt_solve1(const pt_svopt_t *opt, const pt_match_t *ma, uint32_t off, uint32_t cnt, uint64_t *x, solve_aux_t *aux)
+uint32_t pt_solve1(const pt_svopt_t *opt, const pt_match_t *ma, uint64_t *x, solve_aux_t *aux)
 {
-	uint32_t i, j, k, n_iter = 0;
+	uint32_t j, k, n_iter = 0;
 	int64_t sc_ori, sc_opt = -(1<<30), sc;
-	if (cnt < 2) return 0;
-
-	// populate aux->a[]
-	aux->n = 0;
-	for (i = 0; i < cnt; ++i) {
-		uint32_t k = (uint32_t)ma->cc[off + i];
-		uint32_t o = ma->idx[k] >> 32;
-		uint32_t n = (uint32_t)ma->idx[k], j;
-		aux->shuffled[i] = k;
-		for (j = 0; j < n; ++j) {
-			const pt_match1_t *m = &ma->ma[o + j];
-			if (aux->n == aux->m) PT_EXPAND(aux->a, aux->m);
-			aux->a[aux->n++] = (uint64_t)((uint32_t)-1 - m->m) << 32 | (o + j);
-		}
-	}
-	radix_sort_gfa64(aux->a, aux->a + aux->n);
+	if (aux->size < 2) return 0;
 
 	// first guess
-	sc_ori = pt_solve1_init_phase(ma, opt->topn, cnt, x, aux);
-	if (cnt == 2) return 0;
+	sc_ori = pt_solve1_init_phase(ma, opt->topn, x, aux);
+	if (aux->size == 2) return 0;
 
 	// optimize
-	sc_opt = pt_solve1_optimize(ma, opt->topn, off, cnt, x, aux, &n_iter);
-	for (j = 0; j < cnt; ++j)
+	sc_opt = pt_solve1_optimize(ma, opt->topn, x, aux, &n_iter);
+	for (j = 0; j < aux->size; ++j)
 		aux->s_tmp[aux->shuffled[j]] = aux->s[aux->shuffled[j]];
 	for (k = 0; k < opt->n_perturb; ++k) {
-		pt_solve1_perturb(opt, ma, off, cnt, x, aux);
-		sc = pt_solve1_optimize(ma, opt->topn, off, cnt, x, aux, &n_iter);
+		pt_solve1_perturb(opt, ma, x, aux);
+		sc = pt_solve1_optimize(ma, opt->topn, x, aux, &n_iter);
 		if (sc > sc_opt) {
-			for (j = 0; j < cnt; ++j)
+			for (j = 0; j < aux->size; ++j)
 				aux->s_tmp[aux->shuffled[j]] = aux->s[aux->shuffled[j]];
 			sc_opt = sc;
 		} else {
-			for (j = 0; j < cnt; ++j)
+			for (j = 0; j < aux->size; ++j)
 				aux->s[aux->shuffled[j]] = aux->s_tmp[aux->shuffled[j]];
 		}
 	}
-	for (j = 0; j < cnt; ++j)
+	for (j = 0; j < aux->size; ++j)
 		aux->s[aux->shuffled[j]] = aux->s_tmp[aux->shuffled[j]];
 	fprintf(stderr, "[%s] group:%d, size:%d, #edges:%d, #iter:%d, sc_ori:%ld, sc_opt:%ld\n", __func__,
-			(uint32_t)(ma->cc[off]>>32), cnt, aux->n, n_iter, (long)sc_ori, (long)sc_opt);
+			(uint32_t)(ma->cc[aux->off]>>32), aux->size, aux->n, n_iter, (long)sc_ori, (long)sc_opt);
 	return n_iter;
 }
 
@@ -246,8 +245,10 @@ int8_t *pt_solve_core(const pt_svopt_t *opt, const pt_match_t *ma)
 	PT_MALLOC(aux->shuffled, ma->n_seg); // FIXME: this is over-allocation for convenience
 	for (st = 0, i = 1; i <= ma->n_seg; ++i) {
 		if (i == ma->n_seg || ma->cc[st]>>32 != ma->cc[i]>>32) {
-			if (i - st >= 2)
-				pt_solve1(opt, ma, st, i - st, &x, aux);
+			if (i - st >= 2) {
+				aux->off = st, aux->size = i - st;
+				pt_solve1(opt, ma, &x, aux);
+			}
 			st = i;
 		}
 	}
