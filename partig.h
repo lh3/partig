@@ -32,9 +32,13 @@ typedef struct {
 } pt_match1_t;
 
 typedef struct {
-	uint32_t *cnt, *ucnt, n_ma, n_seg;
-	uint64_t *idx, *group;
-	int8_t *s; // phase
+	uint32_t *cnt; // number of low-occurrence k-mers
+	uint32_t *ucnt; // number of unique k-mers
+	uint32_t n_seg; // number of segments; same as gfa_t::n_seg
+	uint32_t n_ma; // size of the ma[] array below
+	uint64_t *idx; // index into ma[] (of size n_seg)
+	uint64_t *group; // connected components; group_id<<32|sid (of size n_seg)
+	int8_t *s; // phase (of size n_seg)
 	pt_match1_t *ma;
 } pt_match_t;
 
