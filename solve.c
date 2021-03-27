@@ -8,7 +8,7 @@ void pt_svopt_init(pt_svopt_t *opt)
 	memset(opt, 0, sizeof(pt_svopt_t));
 	opt->seed = 11;
 	opt->topn = 1<<30;
-	opt->n_perturb = 100;
+	opt->n_perturb = 1000;
 	opt->f_perturb = 0.1;
 }
 
