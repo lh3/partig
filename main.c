@@ -11,6 +11,7 @@ static void print_usage(FILE *fp, const pt_pdopt_t *po, const pt_svopt_t *so)
 	fprintf(stderr, "  -k INT     k-mer size [%d]\n", po->k);
 	fprintf(stderr, "  -w INT     minimizer window size [%d]\n", po->w);
 	fprintf(stderr, "  -c INT     max occurrance [%d]\n", po->max_occ);
+	fprintf(stderr, "  -m FLOAT   mini k-mer similarity [%.3g]\n", po->min_sim);
 	fprintf(stderr, "  -n INT     inspect top INT edges [%d]\n", so->topn);
 	fprintf(stderr, "  -s INT     RNG seed [%ld]\n", (long)so->seed);
 	fprintf(stderr, "  -p INT     rounds of perturbations [%d]\n", so->n_perturb);
@@ -29,10 +30,11 @@ int main(int argc, char *argv[])
 	pt_realtime();
 	pt_pdopt_init(&po);
 	pt_svopt_init(&so);
-	while ((c = ketopt(&o, argc, argv, 1, "k:w:c:n:s:p:f:", 0)) >= 0) {
+	while ((c = ketopt(&o, argc, argv, 1, "k:w:c:n:s:p:f:m:", 0)) >= 0) {
 		if (c == 'k') po.k = atoi(o.arg);
 		else if (c == 'w') po.w = atoi(o.arg);
 		else if (c == 'c') po.max_occ = atoi(o.arg);
+		else if (c == 'm') po.min_sim = atof(o.arg);
 		else if (c == 'n') so.topn = atoi(o.arg);
 		else if (c == 's') so.seed = atol(o.arg);
 		else if (c == 'p') so.n_perturb = atoi(o.arg);
