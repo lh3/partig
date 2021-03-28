@@ -12,7 +12,7 @@ void pt_pdopt_init(pt_pdopt_t *opt)
 	opt->k = 51, opt->w = 51, opt->is_hpc = 1;
 	opt->max_occ = 20;
 	opt->min_cnt = 5;
-	opt->min_sim = 0.9;
+	opt->min_sim = 0.95;
 	opt->diff_thres = 0.5;
 }
 
