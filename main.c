@@ -16,6 +16,7 @@ static void print_usage(FILE *fp, const pt_pdopt_t *po, const pt_svopt_t *so)
 	fprintf(stderr, "  -s INT     RNG seed [%ld]\n", (long)so->seed);
 	fprintf(stderr, "  -p INT     rounds of perturbations [%d]\n", so->n_perturb);
 	fprintf(stderr, "  -f FLOAT   fraction to flip for perturbation [%.3g]\n", so->f_perturb);
+	fprintf(stderr, "  -l FILE    unitig links []\n");
 }
 
 int main(int argc, char *argv[])
@@ -26,11 +27,14 @@ int main(int argc, char *argv[])
 	gfa_t *g;
 	pt_pdopt_t po;
 	pt_svopt_t so;
+	char *fn_link = 0;
+	pt128_t *link = 0;
+	uint32_t n_link = 0;
 
 	pt_realtime();
 	pt_pdopt_init(&po);
 	pt_svopt_init(&so);
-	while ((c = ketopt(&o, argc, argv, 1, "k:w:c:n:s:p:f:m:", 0)) >= 0) {
+	while ((c = ketopt(&o, argc, argv, 1, "k:w:c:n:s:p:f:m:l:", 0)) >= 0) {
 		if (c == 'k') po.k = atoi(o.arg);
 		else if (c == 'w') po.w = atoi(o.arg);
 		else if (c == 'c') po.max_occ = atoi(o.arg);
@@ -39,6 +43,7 @@ int main(int argc, char *argv[])
 		else if (c == 's') so.seed = atol(o.arg);
 		else if (c == 'p') so.n_perturb = atoi(o.arg);
 		else if (c == 'f') so.f_perturb = atof(o.arg);
+		else if (c == 'l') fn_link = o.arg;
 	}
 	if (o.ind == argc) {
 		print_usage(stderr, &po, &so);
@@ -48,6 +53,13 @@ int main(int argc, char *argv[])
 	g = gfa_read(argv[o.ind]);
 	if (pt_verbose >= 3)
 		fprintf(stderr, "[%s::%.3f] read the graph\n", __func__, pt_realtime());
+
+	if (fn_link) {
+		link = pt_read_links(g, fn_link, &n_link);
+		if (pt_verbose >= 3)
+			fprintf(stderr, "[%s::%.3f] read %d links\n", __func__, pt_realtime(), n_link);
+	}
+
 	ma = pt_pdist(&po, g);
 	pt_solve(&so, ma);
 	pt_match_print(stdout, g, ma);

@@ -64,6 +64,8 @@ void pt_match_free(pt_match_t *ma);
 void pt_cc(pt_match_t *ma);
 void pt_solve(const pt_svopt_t *opt, pt_match_t *ma);
 
+pt128_t *pt_read_links(const gfa_t *g, const char *fn, uint32_t *n_link_);
+
 double pt_cputime(void);
 double pt_realtime(void);
 long pt_peakrss(void);
