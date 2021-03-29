@@ -204,6 +204,12 @@ static void pt_pdist_flt(pt_match_t *ma, int32_t min_cnt, double diff_thres)
 		for (j = o; j < o + n; ++j)
 			if (ma->ma[j].m >= max * diff_thres || ma->ma[j].m + min_cnt >= max)
 				mark[j] = 1;
+		for (j = o + 1; j < o + n; ++j) {
+			if (ma->ma[j].sid[1] == ma->ma[j-1].sid[1]) {
+				if (ma->ma[j].m > ma->ma[j-1].m) mark[j-1] = 0;
+				else mark[j] = 0;
+			}
+		}
 	}
 	for (i = 0; i < ma->n_ma; ++i)
 		if (mark[i])
