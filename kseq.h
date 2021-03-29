@@ -154,7 +154,7 @@ typedef struct __kstring_t {
 	__KS_GETUNTIL(SCOPE, __read) \
 	__KS_INLINED(__read)
 
-#define KSTREAM_INIT(type_t, __read, __bufsize) KSTREAM_INIT2(static, type_t, __read, __bufsize)
+#define KSTREAM_INIT(type_t, __read, __bufsize) KSTREAM_INIT2(static klib_unused, type_t, __read, __bufsize)
 
 #define KSTREAM_DECLARE(type_t, __read) \
 	__KS_TYPE(type_t) \

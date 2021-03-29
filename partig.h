@@ -53,6 +53,11 @@ typedef struct {
 	pt_match1_t *ma;
 } pt_match_t;
 
+typedef struct {
+	uint64_t x;
+	int64_t m, l;
+} pt_node_t;
+
 extern uint32_t pt_verbose;
 
 void pt_pdopt_init(pt_pdopt_t *opt);
@@ -62,9 +67,9 @@ pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g);
 void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma);
 void pt_match_free(pt_match_t *ma);
 void pt_cc(pt_match_t *ma);
-void pt_solve(const pt_svopt_t *opt, pt_match_t *ma);
+void pt_partition(const pt_svopt_t *opt, pt_match_t *ma);
 
-pt128_t *pt_read_links(const gfa_t *g, const char *fn, uint32_t *n_link_);
+void pt_phase(const gfa_t *g, const pt_match_t *ma, const char *fn_link);
 
 double pt_cputime(void);
 double pt_realtime(void);

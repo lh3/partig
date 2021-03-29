@@ -228,7 +228,7 @@ uint32_t pt_solve1(const pt_svopt_t *opt, const pt_match_t *ma, uint64_t *x, sol
 	return n_iter;
 }
 
-int8_t *pt_solve_core(const pt_svopt_t *opt, const pt_match_t *ma)
+int8_t *pt_partition_core(const pt_svopt_t *opt, const pt_match_t *ma)
 {
 	int8_t *s;
 	uint32_t st, i, max = 0;
@@ -260,13 +260,13 @@ int8_t *pt_solve_core(const pt_svopt_t *opt, const pt_match_t *ma)
 	return s;
 }
 
-void pt_solve(const pt_svopt_t *opt, pt_match_t *ma)
+void pt_partition(const pt_svopt_t *opt, pt_match_t *ma)
 {
 	uint32_t i;
 	int8_t *s;
 	uint64_t *buf;
 	pt_cc(ma);
-	s = pt_solve_core(opt, ma);
+	s = pt_partition_core(opt, ma);
 	PT_MALLOC(buf, ma->n_ma); // FIXME: this is over-allocation for convenience
 	for (i = 0; i < ma->n_seg; ++i) {
 		uint32_t z[2];

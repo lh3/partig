@@ -28,8 +28,6 @@ int main(int argc, char *argv[])
 	pt_pdopt_t po;
 	pt_svopt_t so;
 	char *fn_link = 0;
-	pt128_t *link = 0;
-	uint32_t n_link = 0;
 
 	pt_realtime();
 	pt_pdopt_init(&po);
@@ -54,14 +52,9 @@ int main(int argc, char *argv[])
 	if (pt_verbose >= 3)
 		fprintf(stderr, "[%s::%.3f] read the graph\n", __func__, pt_realtime());
 
-	if (fn_link) {
-		link = pt_read_links(g, fn_link, &n_link);
-		if (pt_verbose >= 3)
-			fprintf(stderr, "[%s::%.3f] read %d links\n", __func__, pt_realtime(), n_link);
-	}
-
 	ma = pt_pdist(&po, g);
-	pt_solve(&so, ma);
+	pt_partition(&so, ma);
+	if (fn_link) pt_phase(g, ma, fn_link);
 	pt_match_print(stdout, g, ma);
 
 	pt_match_free(ma);
