@@ -122,10 +122,10 @@ pt_mcgraph_t *pt_phase_gen_graph(const gfa_t *g, const pt_match_t *ma, const cha
 		mcg->edge[i].x = edge[i].x;
 		mcg->edge[i].w = (int64_t)(edge[i].m - w * edge[i].l + .499);
 	}
+	PT_MALLOC(mcg->s, mcg->n_node);
 	for (i = 0; i < mcg->n_node; ++i)
 		mcg->s[i] = ma->info[i].s;
 	pt_edge_print(stdout, g, n_edge, edge);
 	free(edge);
-	pt_mc_index(mcg);
 	return mcg;
 }

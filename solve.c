@@ -92,16 +92,6 @@ static int64_t pt_score(const pt_match_t *ma, int32_t topn, solve_aux_t *aux)
 	return z;
 }
 
-static void ks_shuffle_uint32_t(size_t n, uint32_t a[], uint64_t *x)
-{
-	size_t i, j;
-	for (i = n; i > 1; --i) {
-		uint32_t tmp;
-		j = (size_t)(kr_drand_r(x) * i);
-		tmp = a[j]; a[j] = a[i-1]; a[i-1] = tmp;
-	}
-}
-
 static int64_t pt_solve1_init_phase(const pt_match_t *ma, int32_t topn, uint64_t *x, solve_aux_t *aux)
 {
 	uint32_t i;

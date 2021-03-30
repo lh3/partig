@@ -32,6 +32,16 @@ static inline double kr_drand_r(uint64_t *x)
     return u.d - 1.0;
 }
 
+static inline void ks_shuffle_uint32_t(size_t n, uint32_t a[], uint64_t *x)
+{
+	size_t i, j;
+	for (i = n; i > 1; --i) {
+		uint32_t tmp;
+		j = (size_t)(kr_drand_r(x) * i);
+		tmp = a[j]; a[j] = a[i-1]; a[i-1] = tmp;
+	}
+}
+
 void pt_sketch(const char *str, int len, int w, int k, uint32_t rid, int is_hpc, pt_mz1_v *p); // in sketch.c
 void radix_sort_pt128x(pt128_t *st, pt128_t *en);
 

@@ -2,7 +2,7 @@ CC=			gcc
 CFLAGS=		-g -Wall -Wc++-compat -std=c99 -O2
 CPPFLAGS=
 INCLUDES=
-OBJS=		kalloc.o gfa-base.o gfa-io.o misc.o sketch.o pdist.o solve.o phase.o maxcut.o
+OBJS=		kalloc.o gfa-base.o gfa-io.o misc.o sketch.o pdist.o solve.o phase.o
 PROG=		partig
 LIBS=		-lz -lpthread -lm
 
@@ -34,7 +34,6 @@ gfa-base.o: gfa-priv.h gfa.h kstring.h khash.h kalloc.h ksort.h
 gfa-io.o: kstring.h gfa-priv.h gfa.h kseq.h
 kalloc.o: kalloc.h
 main.o: partig.h gfa.h ketopt.h
-maxcut.o: ptpriv.h partig.h gfa.h
 misc.o: ptpriv.h partig.h gfa.h ksort.h
 pdist.o: ptpriv.h partig.h gfa.h ksort.h gfa-priv.h
 phase.o: ptpriv.h partig.h gfa.h ksort.h kseq.h
