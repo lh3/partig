@@ -34,8 +34,9 @@ gfa-base.o: gfa-priv.h gfa.h kstring.h khash.h kalloc.h ksort.h
 gfa-io.o: kstring.h gfa-priv.h gfa.h kseq.h
 kalloc.o: kalloc.h
 main.o: partig.h gfa.h ketopt.h
+maxcut.o: ptpriv.h partig.h gfa.h
 misc.o: ptpriv.h partig.h gfa.h ksort.h
 pdist.o: ptpriv.h partig.h gfa.h ksort.h gfa-priv.h
-phase.o: ptpriv.h partig.h gfa.h kseq.h
+phase.o: ptpriv.h partig.h gfa.h ksort.h kseq.h
 sketch.o: partig.h gfa.h kvec.h
 solve.o: ptpriv.h partig.h gfa.h gfa-priv.h
