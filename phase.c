@@ -5,7 +5,7 @@
 KSTREAM_INIT(gzFile, gzread, 0x10000)
 
 #define el_key(z) ((z).x)
-KRADIX_SORT_INIT(el, pt_node_t, el_key, 8)
+KRADIX_SORT_INIT(el, pt_edge_t, el_key, 8)
 
 pt128_t *pt_read_links(const gfa_t *g, const char *fn, uint32_t *n_link_)
 {
@@ -55,45 +55,45 @@ pt128_t *pt_read_links(const gfa_t *g, const char *fn, uint32_t *n_link_)
 	return link;
 }
 
-pt_node_t *pt_merge_list(uint32_t n_ma, const pt_match1_t *ma, uint32_t n_link, const pt128_t *link, uint32_t *n_node_)
+pt_edge_t *pt_merge_list(uint32_t n_ma, const pt_match1_t *ma, uint32_t n_link, const pt128_t *link, uint32_t *n_edge_)
 {
-	uint32_t i, k, n_node, st;
-	pt_node_t *node;
-	PT_CALLOC(node, n_ma + n_link);
+	uint32_t i, k, n_edge, st;
+	pt_edge_t *edge;
+	PT_CALLOC(edge, n_ma + n_link);
 	for (i = k = 0; i < n_ma; ++i) {
-		pt_node_t *e = &node[k++];
+		pt_edge_t *e = &edge[k++];
 		e->x = (uint64_t)ma[i].sid[0] << 32 | ma[i].sid[1];
 		e->m = ma[i].m;
 	}
 	for (i = 0; i < n_link; ++i) {
-		pt_node_t *e = &node[k++];
+		pt_edge_t *e = &edge[k++];
 		e->x = link[i].x;
 		e->l = link[i].y;
 	}
-	n_node = k;
-	radix_sort_el(node, node + n_node);
-	for (st = 0, i = 1, k = 0; i <= n_node; ++i) {
-		if (i == n_node || node[i].x != node[st].x) {
-			assert(i - st == 1 || i - st == 2);
-			if (i - st == 2) {
-				assert(node[st].m * node[st+1].m == 0);
-				assert(node[st].l * node[st+1].l == 0);
-				node[k].m = node[st].m + node[st+1].m;
-				node[k].l = node[st].l + node[st+1].l;
-				node[k++].x = node[st].x;
-			} else node[k++] = node[i];
+	n_edge = k;
+	radix_sort_el(edge, edge + n_edge);
+	for (st = 0, i = 1, k = 0; i <= n_edge; ++i) {
+		if (i == n_edge || edge[i].x != edge[st].x) {
+			uint32_t j;
+			int64_t max_m = 0, max_l = 0;
+			for (j = st; j < i; ++j) {
+				max_m = max_m > edge[j].m? max_m : edge[j].m;
+				max_l = max_l > edge[j].l? max_l : edge[j].l;
+			}
+			edge[k].m = max_m, edge[k].l = max_l;
+			edge[k++].x = edge[st].x;
 			st = i;
 		}
 	}
-	*n_node_ = n_node = k;
-	return node;
+	*n_edge_ = n_edge = k;
+	return edge;
 }
 
-void pt_node_print(FILE *fp, const gfa_t *g, uint32_t n_node, const pt_node_t *node)
+void pt_edge_print(FILE *fp, const gfa_t *g, uint32_t n_edge, const pt_edge_t *edge)
 {
 	uint32_t i;
-	for (i = 0; i < n_node; ++i) {
-		const pt_node_t *e = &node[i];
+	for (i = 0; i < n_edge; ++i) {
+		const pt_edge_t *e = &edge[i];
 		fprintf(fp, "E\t%s\t%s\t%ld\t%ld\n", g->seg[e->x>>32].name, g->seg[(uint32_t)e->x].name,
 				(long)e->m, (long)e->l);
 	}
@@ -101,11 +101,11 @@ void pt_node_print(FILE *fp, const gfa_t *g, uint32_t n_node, const pt_node_t *n
 
 void pt_phase(const gfa_t *g, const pt_match_t *ma, const char *fn_link)
 {
-	uint32_t n_link, n_node;
+	uint32_t n_link, n_edge;
 	pt128_t *link;
-	pt_node_t *node;
+	pt_edge_t *edge;
 
 	link = pt_read_links(g, fn_link, &n_link);
-	node = pt_merge_list(ma->n_ma, ma->ma, n_link, link, &n_node);
-	pt_node_print(stdout, g, n_node, node);
+	edge = pt_merge_list(ma->n_ma, ma->ma, n_link, link, &n_edge);
+	pt_edge_print(stdout, g, n_edge, edge);
 }

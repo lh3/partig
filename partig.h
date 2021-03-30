@@ -56,7 +56,12 @@ typedef struct {
 typedef struct {
 	uint64_t x;
 	int64_t m, l;
-} pt_node_t;
+} pt_edge_t;
+
+typedef struct {
+	uint32_t n_edge;
+	pt_edge_t *edge;
+} pt_pgraph_t;
 
 extern uint32_t pt_verbose;
 
