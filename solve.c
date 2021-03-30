@@ -66,22 +66,6 @@ void pt_cc(pt_match_t *ma)
 	ma->cc = pt_cc_core(ma);
 }
 
-static inline uint64_t kr_splitmix64(uint64_t x)
-{
-	uint64_t z = (x += 0x9E3779B97F4A7C15ULL);
-	z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
-	z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
-	return z ^ (z >> 31);
-}
-
-static inline double kr_drand_r(uint64_t *x)
-{
-    union { uint64_t i; double d; } u;
-	*x = kr_splitmix64(*x);
-    u.i = 0x3FFULL << 52 | (*x) >> 12;
-    return u.d - 1.0;
-}
-
 typedef struct {
 	uint32_t m, n, *shuffled;
 	uint32_t off, size; // offset in pt_match_t::cc; size of the component

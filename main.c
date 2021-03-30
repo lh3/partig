@@ -28,11 +28,12 @@ int main(int argc, char *argv[])
 	pt_pdopt_t po;
 	pt_svopt_t so;
 	char *fn_link = 0;
+	double weight = 1000.0;
 
 	pt_realtime();
 	pt_pdopt_init(&po);
 	pt_svopt_init(&so);
-	while ((c = ketopt(&o, argc, argv, 1, "k:w:c:n:s:p:f:m:l:", 0)) >= 0) {
+	while ((c = ketopt(&o, argc, argv, 1, "k:w:c:n:s:p:f:m:l:j:", 0)) >= 0) {
 		if (c == 'k') po.k = atoi(o.arg);
 		else if (c == 'w') po.w = atoi(o.arg);
 		else if (c == 'c') po.max_occ = atoi(o.arg);
@@ -42,6 +43,7 @@ int main(int argc, char *argv[])
 		else if (c == 'p') so.n_perturb = atoi(o.arg);
 		else if (c == 'f') so.f_perturb = atof(o.arg);
 		else if (c == 'l') fn_link = o.arg;
+		else if (c == 'j') weight = atof(o.arg);
 	}
 	if (o.ind == argc) {
 		print_usage(stderr, &po, &so);
@@ -54,7 +56,10 @@ int main(int argc, char *argv[])
 
 	ma = pt_pdist(&po, g);
 	pt_partition(&so, ma);
-	if (fn_link) pt_phase(g, ma, fn_link);
+	if (fn_link) {
+		pt_mcgraph_t *mcg;
+		mcg = pt_phase_gen_graph(g, ma, fn_link, weight);
+	}
 	pt_match_print(stdout, g, ma);
 
 	pt_match_free(ma);

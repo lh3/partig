@@ -55,13 +55,15 @@ typedef struct {
 
 typedef struct {
 	uint64_t x;
-	int64_t m, l;
-} pt_edge_t;
+	int64_t w;
+} pt_mcedge_t;
 
 typedef struct {
-	uint32_t n_edge;
-	pt_edge_t *edge;
-} pt_pgraph_t;
+	uint32_t n_node, n_edge;
+	pt_mcedge_t *edge;
+	uint64_t *idx;
+	int8_t *s;
+} pt_mcgraph_t;
 
 extern uint32_t pt_verbose;
 
@@ -74,7 +76,10 @@ void pt_match_free(pt_match_t *ma);
 void pt_cc(pt_match_t *ma);
 void pt_partition(const pt_svopt_t *opt, pt_match_t *ma);
 
-void pt_phase(const gfa_t *g, const pt_match_t *ma, const char *fn_link);
+pt_mcgraph_t *pt_phase_gen_graph(const gfa_t *g, const pt_match_t *ma, const char *fn_link, double w);
+
+void pt_mc_index(pt_mcgraph_t *mcg);
+void pt_mc_destroy(pt_mcgraph_t *mcg);
 
 double pt_cputime(void);
 double pt_realtime(void);

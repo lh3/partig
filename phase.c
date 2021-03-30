@@ -4,6 +4,11 @@
 #include "kseq.h"
 KSTREAM_INIT(gzFile, gzread, 0x10000)
 
+typedef struct {
+	uint64_t x;
+	int64_t m, l;
+} pt_edge_t;
+
 #define el_key(z) ((z).x)
 KRADIX_SORT_INIT(el, pt_edge_t, el_key, 8)
 
@@ -99,13 +104,28 @@ void pt_edge_print(FILE *fp, const gfa_t *g, uint32_t n_edge, const pt_edge_t *e
 	}
 }
 
-void pt_phase(const gfa_t *g, const pt_match_t *ma, const char *fn_link)
+pt_mcgraph_t *pt_phase_gen_graph(const gfa_t *g, const pt_match_t *ma, const char *fn_link, double w)
 {
-	uint32_t n_link, n_edge;
+	uint32_t i, n_link, n_edge;
 	pt128_t *link;
 	pt_edge_t *edge;
+	pt_mcgraph_t *mcg;
 
+	PT_CALLOC(mcg, 1);
 	link = pt_read_links(g, fn_link, &n_link);
 	edge = pt_merge_list(ma->n_ma, ma->ma, n_link, link, &n_edge);
+	free(link);
+	mcg->n_node = g->n_seg;
+	mcg->n_edge = n_edge;
+	PT_CALLOC(mcg->edge, mcg->n_edge);
+	for (i = 0; i < mcg->n_edge; ++i) {
+		mcg->edge[i].x = edge[i].x;
+		mcg->edge[i].w = (int64_t)(edge[i].m - w * edge[i].l + .499);
+	}
+	for (i = 0; i < mcg->n_node; ++i)
+		mcg->s[i] = ma->info[i].s;
 	pt_edge_print(stdout, g, n_edge, edge);
+	free(edge);
+	pt_mc_index(mcg);
+	return mcg;
 }
