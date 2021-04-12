@@ -197,7 +197,7 @@ uint32_t pt_solve1(const pt_svopt_t *opt, const pt_match_t *ma, uint64_t *x, sol
 	}
 	for (j = 0; j < aux->size; ++j)
 		aux->s[aux->shuffled[j]] = aux->s_tmp[aux->shuffled[j]];
-	fprintf(stderr, "[%s] group:%d, size:%d, #edges:%d, #iter:%d, sc_ori:%ld, sc_opt:%ld\n", __func__,
+	fprintf(stderr, "[%s::%.3f] group:%d, size:%d, #edges:%d, #iter:%d, sc_ori:%ld, sc_opt:%ld\n", __func__, pt_realtime(),
 			(uint32_t)(ma->cc[aux->off]>>32), aux->size, aux->n, n_iter, (long)sc_ori, (long)sc_opt);
 	return n_iter;
 }
