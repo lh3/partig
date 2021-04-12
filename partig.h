@@ -40,30 +40,15 @@ typedef struct {
 
 typedef struct {
 	uint32_t cnt2, cnt1;
-	uint32_t m[2];
-	int8_t s;
 } pt_uinfo_t;
 
 typedef struct {
 	uint32_t n_seg; // number of segments; same as gfa_t::n_seg
 	uint32_t n_ma; // size of the ma[] array below
 	uint64_t *idx; // index into ma[] (of size n_seg)
-	uint64_t *cc; // connected components; group_id<<32|sid (of size n_seg)
 	pt_uinfo_t *info; // of size n_seg
 	pt_match1_t *ma;
 } pt_match_t;
-
-typedef struct {
-	uint64_t x;
-	int64_t w;
-} pt_mcedge_t;
-
-typedef struct {
-	uint32_t n_node, n_edge;
-	pt_mcedge_t *edge;
-	uint64_t *idx;
-	int8_t *s;
-} pt_mcgraph_t;
 
 extern uint32_t pt_verbose;
 
@@ -73,13 +58,6 @@ void pt_svopt_init(pt_svopt_t *opt);
 pt_match_t *pt_pdist(const pt_pdopt_t *opt, const gfa_t *g);
 void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma);
 void pt_match_free(pt_match_t *ma);
-void pt_cc(pt_match_t *ma);
-void pt_partition(const pt_svopt_t *opt, pt_match_t *ma);
-
-pt_mcgraph_t *pt_phase_gen_graph(const gfa_t *g, const pt_match_t *ma, const char *fn_link, double w);
-
-void pt_mc_index(pt_mcgraph_t *mcg);
-void pt_mc_destroy(pt_mcgraph_t *mcg);
 
 double pt_cputime(void);
 double pt_realtime(void);

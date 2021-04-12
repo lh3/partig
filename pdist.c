@@ -252,20 +252,17 @@ void pt_match_print(FILE *fp, const gfa_t *g, const pt_match_t *ma)
 	for (i = 0; i < g->n_seg; ++i) {
 		const gfa_seg_t *s = &g->seg[i];
 		const pt_uinfo_t *u = &ma->info[i];
-		fprintf(fp, "C\t%s\t%d\t%d\t%d\t%d\t%d\t%d\n", s->name, s->len, u->cnt2, u->cnt1, u->s, u->m[0], u->m[1]);
+		fprintf(fp, "C\t%s\t%d\t%d\t%d\n", s->name, s->len, u->cnt2, u->cnt1);
 	}
 	for (i = 0; i < ma->n_ma; ++i) {
 		const pt_match1_t *m = &ma->ma[i];
-		fprintf(fp, "S\t%s\t%s\t%c\t%d\t%d\t%d\t%.6f\t%d\t%d\n", g->seg[m->sid[0]].name, g->seg[m->sid[1]].name,
-				"+-"[!!m->rev], ma->info[m->sid[0]].cnt2, ma->info[m->sid[1]].cnt2, m->m, m->sim,
-				ma->info[m->sid[0]].s, ma->info[m->sid[1]].s);
+		fprintf(fp, "S\t%s\t%s\t%c\t%d\t%d\t%d\t%.6f\n", g->seg[m->sid[0]].name, g->seg[m->sid[1]].name,
+				"+-"[!!m->rev], ma->info[m->sid[0]].cnt2, ma->info[m->sid[1]].cnt2, m->m, m->sim);
 	}
-	for (i = 0; i < ma->n_seg; ++i)
-		printf("G\t%d\t%s\n", (uint32_t)(ma->cc[i]>>32), g->seg[(uint32_t)ma->cc[i]].name);
 }
 
 void pt_match_free(pt_match_t *ma)
 {
-	free(ma->idx); free(ma->info); free(ma->ma); free(ma->cc);
+	free(ma->idx); free(ma->info); free(ma->ma);
 	free(ma);
 }

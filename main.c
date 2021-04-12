@@ -4,7 +4,7 @@
 #include "ketopt.h"
 #include "gfa.h"
 
-static void print_usage(FILE *fp, const pt_pdopt_t *po, const pt_svopt_t *so)
+static void print_usage(FILE *fp, const pt_pdopt_t *po)
 {
 	fprintf(stderr, "Usage: partig [options] <in.gfa>\n");
 	fprintf(stderr, "Options:\n");
@@ -12,11 +12,6 @@ static void print_usage(FILE *fp, const pt_pdopt_t *po, const pt_svopt_t *so)
 	fprintf(stderr, "  -w INT     minimizer window size [%d]\n", po->w);
 	fprintf(stderr, "  -c INT     max occurrance [%d]\n", po->max_occ);
 	fprintf(stderr, "  -m FLOAT   mini k-mer similarity [%.3g]\n", po->min_sim);
-	fprintf(stderr, "  -n INT     inspect top INT edges [%d]\n", so->topn);
-	fprintf(stderr, "  -s INT     RNG seed [%ld]\n", (long)so->seed);
-	fprintf(stderr, "  -p INT     rounds of perturbations [%d]\n", so->n_perturb);
-	fprintf(stderr, "  -f FLOAT   fraction to flip for perturbation [%.3g]\n", so->f_perturb);
-	fprintf(stderr, "  -l FILE    unitig links []\n");
 }
 
 int main(int argc, char *argv[])
@@ -26,27 +21,17 @@ int main(int argc, char *argv[])
 	pt_match_t *ma;
 	gfa_t *g;
 	pt_pdopt_t po;
-	pt_svopt_t so;
-	char *fn_link = 0;
-	double weight = 1000.0;
 
 	pt_realtime();
 	pt_pdopt_init(&po);
-	pt_svopt_init(&so);
-	while ((c = ketopt(&o, argc, argv, 1, "k:w:c:n:s:p:f:m:l:j:", 0)) >= 0) {
+	while ((c = ketopt(&o, argc, argv, 1, "k:w:c:m:", 0)) >= 0) {
 		if (c == 'k') po.k = atoi(o.arg);
 		else if (c == 'w') po.w = atoi(o.arg);
 		else if (c == 'c') po.max_occ = atoi(o.arg);
 		else if (c == 'm') po.min_sim = atof(o.arg);
-		else if (c == 'n') so.topn = atoi(o.arg);
-		else if (c == 's') so.seed = atol(o.arg);
-		else if (c == 'p') so.n_perturb = atoi(o.arg);
-		else if (c == 'f') so.f_perturb = atof(o.arg);
-		else if (c == 'l') fn_link = o.arg;
-		else if (c == 'j') weight = atof(o.arg);
 	}
 	if (o.ind == argc) {
-		print_usage(stderr, &po, &so);
+		print_usage(stderr, &po);
 		return 0;
 	}
 
@@ -55,11 +40,13 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "[%s::%.3f] read the graph\n", __func__, pt_realtime());
 
 	ma = pt_pdist(&po, g);
+	/*
 	pt_partition(&so, ma);
 	if (fn_link) {
 		pt_mcgraph_t *mcg;
 		mcg = pt_phase_gen_graph(g, ma, fn_link, weight);
 	}
+	*/
 	pt_match_print(stdout, g, ma);
 
 	pt_match_free(ma);
